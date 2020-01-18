@@ -26,9 +26,10 @@ def getStatusLine(code=200):
 
 # Create, bind the socket
 serverSocket = soc.socket(soc.AF_INET, soc.SOCK_STREAM)
-port = 50501 # Arbitrary choice
 host = soc.gethostbyname(soc.gethostname()) # Supposedly safer than just using gethostname()
-serverSocket.bind((host, port))
+port = 50501 # Arbitrary choice
+socketAdr = (host, port)
+serverSocket.bind(socketAdr)
 
 backlog = 5 # Conventional queue size 
 serverSocket.listen(backlog)
