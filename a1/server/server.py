@@ -1,14 +1,11 @@
 '''
 CSC 361 Programming Assignment 1
-A very simple HTTP server that accepts only GET requests.
+A simple HTTP server that accepts only GET requests.
 '''
 
+import os
 import socket as soc
-import sys # In order to terminate the program
-
-##
-# TODO Refactor this into smaller functions including a main
-##
+import sys
 
 httpCodeDescriptions = {
     200: 'OK',
@@ -19,62 +16,67 @@ httpCodeDescriptions = {
     501: 'Not Implemented'
 }
 
-def getStatusLine(code=200):
+def getHeader(code=200):
     httpVersion = 'HTTP/1.1'
     desc = str(httpCodeDescriptions[code])
-    return " ".join([httpVersion, str(code), desc])
+    statusLine = " ".join([httpVersion, str(code), desc]) + '\r\n'
+    return statusLine + '\r\n' # Second CRLF indicates the end of the header
 
-# Create, bind the socket
-serverSocket = soc.socket(soc.AF_INET, soc.SOCK_STREAM)
-host = soc.gethostbyname(soc.gethostname()) # Supposedly safer than just using gethostname()
-port = 50501 # Arbitrary choice
-socketAdr = (host, port)
-serverSocket.bind(socketAdr)
+def handleGetRequest(filename, clientSocket):
+    # Do not allow clients to query server source code.
+    if filename == os.path.basename(__file__):
+        clientSocket.send(getHeader(403))
+        return
 
-backlog = 5 # Conventional queue size 
-serverSocket.listen(backlog)
+    # Ensure file exists
+    if not os.path.isfile(filename):
+        clientSocket.send(getHeader(404))
+        return
 
-while True:
-    # Establish the connection
-    print('Ready to serve...')
-    clientSocket, addr = serverSocket.accept()
-            
+    # Process get request
     try:
-        # Parse the client's request
-        bufferSize = 1024
-        message = clientSocket.recv(bufferSize)
-        msgTokens = message.split()
+        file = open(filename)
+        outputdata = file.read()        
+        file.close()
+
+        clientSocket.send(getHeader(200))
+        clientSocket.sendall(outputdata)
+    
+    except IOError:
+        clientSocket.send(getHeader(500)) # Server error
         
+
+def main(ip, port=80):
+    # Create, bind the socket
+    serverSocket = soc.socket(soc.AF_INET, soc.SOCK_STREAM)
+    serverSocket.bind((ip, port))
+
+    BACKLOG = 5 # Conventional queue size 
+    serverSocket.listen(BACKLOG)
+
+    while True:
+        # Establish the connection
+        print('Ready to serve on {}:{} ...'.format(ip, port))
+        clientSocket, clientAdr = serverSocket.accept()
+        print('Serving client {}'.format(clientAdr))                 
+
+        # Get client request
+        BUFFER_SIZE = 1024
+        msg = clientSocket.recv(BUFFER_SIZE)
+        msgTokens = msg.split()
+        
+        # Only GET requests are implemented
         requestType = msgTokens[0]
         if requestType != "GET":
-            clientSocket.send(getStatusLine(501))
-            continue
+            clientSocket.send(getHeader(501))
+        else:
+            filename = msgTokens[1][1:] # Assume leading slash
+            handleGetRequest(filename, clientSocket)
 
-        filename = msgTokens[1]
-        file = open(filename[1:])
-        outputdata = file.read()
-        # TODO check that the client is not trying to get the server source code.
-
-        try:
-            file.close()
-        except IOError:
-            print('Error. Failed to close file ' + filename)
-            clientSocket.send(getStatusLine(500))
-            continue
-
-        clientSocket.send(getStatusLine(200))
-
-        # Send the content of the requested file to the client
-        for i in range(0, len(outputdata)):           
-            clientSocket.send(outputdata[i].encode())
-        clientSocket.send("\r\n".encode())
-
-    except IOError:
-        # Send response message for file not found
-        clientSocket.send(getStatusLine(404))
-
-    finally:
         clientSocket.close()
 
-serverSocket.close()
-sys.exit() # Terminate the program after sending the corresponding data
+    serverSocket.close()
+    sys.exit()
+
+if __name__ == '__main__':
+    main(str(sys.argv[1]), int(sys.argv[2]))
