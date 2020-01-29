@@ -1,6 +1,8 @@
 '''
 CSC 361 Programming Assignment 1
 A simple HTTP server that accepts only GET requests.
+
+Args: IP to use; Port to use
 '''
 
 import os
@@ -16,6 +18,10 @@ httpCodeDescriptions = {
     501: 'Not Implemented'
 }
 
+'''
+Creates an HTTP header for the given response code.
+This includes two CRLF's at the end. 
+'''
 def getHeader(code=200):
     httpVersion = 'HTTP/1.1'
     desc = str(httpCodeDescriptions[code])
@@ -63,14 +69,16 @@ def serve(serverSocket, ip, port):
         BUFFER_SIZE = 1024
         msg = clientSocket.recv(BUFFER_SIZE)
         msgTokens = msg.split()
-	if msgTokens: # Ensure that there is  content to parse
-            requestType = msgTokens[0]
-            if requestType != "GET":
-                # Only GET requests are implemented
-                clientSocket.send(getHeader(501))
-            else:
-                filename = msgTokens[1][1:] # Assume leading slash
-                handleGetRequest(filename, clientSocket)
+
+        if not msgTokens: 
+            # Ensure that there is content to parse
+            clientSocket.send(getHeader(400))
+        elif msgTokens[0] != "GET": 
+            # Only GET requests are implemented
+            clientSocket.send(getHeader(501))
+        else:
+            filename = msgTokens[1][1:] # Assume leading slash
+            handleGetRequest(filename, clientSocket)
 
         clientSocket.close()
 
@@ -86,10 +94,9 @@ def main(ip, port=80):
         serve(serverSocket, ip, port)
     except:
          # Catch and re-raise any unexpected exception (such as 
-         # user interrupt) after closing the server 
+         # user interrupt) after closing the server's socket 
          raise
     finally:
-        print "Closing socket =========================================="
         serverSocket.close() 
 
 if __name__ == '__main__':
