@@ -22,6 +22,9 @@ def getHeader(code=200):
     statusLine = " ".join([httpVersion, str(code), desc]) + '\r\n'
     return statusLine + '\r\n' # Second CRLF indicates the end of the header
 
+'''
+Responds to a GET request for the specified file.
+'''
 def handleGetRequest(filename, clientSocket):
     # Do not allow clients to query server source code.
     if filename == os.path.basename(__file__):
@@ -44,16 +47,12 @@ def handleGetRequest(filename, clientSocket):
     
     except IOError:
         clientSocket.send(getHeader(500)) # Server error
-        
 
-def main(ip, port=80):
-    # Create, bind the socket
-    serverSocket = soc.socket(soc.AF_INET, soc.SOCK_STREAM)
-    serverSocket.bind((ip, port))
-
-    BACKLOG = 5 # Conventional queue size 
-    serverSocket.listen(BACKLOG)
-
+'''
+The "main" loop of the program. This method services client connections until 
+the server process is terminated.
+'''
+def serve(serverSocket, ip, port):
     while True:
         # Establish the connection
         print('Ready to serve on {}:{} ...'.format(ip, port))
@@ -64,19 +63,34 @@ def main(ip, port=80):
         BUFFER_SIZE = 1024
         msg = clientSocket.recv(BUFFER_SIZE)
         msgTokens = msg.split()
-        
-        # Only GET requests are implemented
-        requestType = msgTokens[0]
-        if requestType != "GET":
-            clientSocket.send(getHeader(501))
-        else:
-            filename = msgTokens[1][1:] # Assume leading slash
-            handleGetRequest(filename, clientSocket)
+	if msgTokens: # Ensure that there is  content to parse
+            requestType = msgTokens[0]
+            if requestType != "GET":
+                # Only GET requests are implemented
+                clientSocket.send(getHeader(501))
+            else:
+                filename = msgTokens[1][1:] # Assume leading slash
+                handleGetRequest(filename, clientSocket)
 
         clientSocket.close()
 
-    serverSocket.close()
-    sys.exit()
+def main(ip, port=80):
+    # Create, bind the socket
+    serverSocket = soc.socket(soc.AF_INET, soc.SOCK_STREAM)
+    serverSocket.bind((ip, port))
+
+    BACKLOG = 5 # Conventional queue size 
+    serverSocket.listen(BACKLOG)
+
+    try:
+        serve(serverSocket, ip, port)
+    except:
+         # Catch and re-raise any unexpected exception (such as 
+         # user interrupt) after closing the server 
+         raise
+    finally:
+        print "Closing socket =========================================="
+        serverSocket.close() 
 
 if __name__ == '__main__':
     main(str(sys.argv[1]), int(sys.argv[2]))
