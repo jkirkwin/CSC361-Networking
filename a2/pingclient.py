@@ -5,7 +5,7 @@ from time import time
 
 NUM_PINGS = 100
 BUFF_SIZE = 1024
-DEFAULT_TIMEOUT_SECONDS = 5
+DEFAULT_TIMEOUT_SECONDS = 1
 
 
 def main(remote_addr):
@@ -18,6 +18,7 @@ def main(remote_addr):
     client_socket = socket(AF_INET, SOCK_DGRAM)
 
     for i in range(NUM_PINGS):
+        print("")
         while not ping(client_socket, remote_addr, i):
             pass
 
@@ -39,7 +40,7 @@ def ping(client_socket, server_addr, message_id):
     if msg.upper() == reply:
         # Ping successful
         print(reply)
-        print("rtt: {}", time() - timestamp)
+        print("RTT for ping {}: {}".format(message_id, time() - timestamp))
         return True
     else:
         # Packet was dropped.
@@ -70,7 +71,8 @@ def get_reply(client_socket, expected_addr, timeout=DEFAULT_TIMEOUT_SECONDS):
     reply_received = False
     while not reply_received:
         # Account for the possibility of packets that were really were dropped.
-        ready = select([client_socket], [], [], timeout)
+        # TODO ask TAs/Jianping about this - make sure it won't lose you marks.
+        ready = select([client_socket], [], [], timeout)  
         if ready[0]:
             (reply, reply_addr) = client_socket.recvfrom(BUFF_SIZE)
             reply_received = reply_addr == expected_addr
