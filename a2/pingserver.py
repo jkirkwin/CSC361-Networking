@@ -1,19 +1,50 @@
 import random
+import sys
+from socket import *
+from time import time
 
-# todo Create a UDP socket
+BUFF_SIZE = 1024
 
-# todo Assign IP address and port number to socket
 
-while True:
-	
-	# todo Receive the client packet along with the address it is coming from
+def main(local_address):
+    """ Handles incoming ping messages.
 
-	# Generate random number in the range of 1 to 10 and if rand is less is than
-	# 4, we consider the packet lost and tell the client to retransmit
-	rand = random.randint(1, 10)    
-	if rand < 4:
+    :param local_address: The IP and port to listen on.
+    :return: ``None``
+    """
 
-		continue
-	
-	# todo Capitalize the message from the client and send the capitalized
-	# version to the client
+    print("Running Ping Server on {}".format(local_address))
+
+    server_socket = socket(AF_INET, SOCK_DGRAM)
+    server_socket.bind(local_address)
+
+    while True:
+        (message, client_address) = server_socket.recvfrom(BUFF_SIZE)
+        server_socket.sendto(get_reply(message), client_address)
+
+
+def get_reply(message):
+    """ Create a reply string for the given ping message.
+
+    This function simulates packet loss in the network by randomly rejecting
+    incoming messages. In this case, the created reply is a custom message used
+    to indicate that the client must re-send its ping. Otherwise, the reply is
+    an echo of the inbound message with all characters capitalized.
+
+    :param message: The ping message to reply to.
+    :return: The reply to send.
+    """
+
+    simulated_loss = random.randint(1, 10) < 4
+    if simulated_loss:
+        message_id = message.split()[1]
+        print("Simulating dropped packet for ping {}".format(message_id))
+        return "lost {} {}".format(message_id, time())
+    else:
+        return message.upper()
+
+
+if __name__ == '__main__':
+    ip = sys.argv[1]
+    port = int(sys.argv[2])
+    main((ip, port))
