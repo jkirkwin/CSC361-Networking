@@ -1,7 +1,6 @@
 import random
 import sys
 from socket import *
-from time import time
 
 BUFF_SIZE = 1024
 
@@ -37,9 +36,11 @@ def get_reply(message):
 
     simulated_loss = random.randint(1, 10) < 4
     if simulated_loss:
-        message_id = message.split()[1]
+        tokens = message.split()
+        message_id = tokens[1]
+        message_timestamp = " ".join(tokens[2:])
         print("Simulating dropped packet for ping {}".format(message_id))
-        return "lost {} {}".format(message_id, time())
+        return "LOST {} {}".format(message_id, message_timestamp)
     else:
         return message.upper()
 

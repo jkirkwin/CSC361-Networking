@@ -1,12 +1,13 @@
 import sys
+import time
 from socket import *
-from time import time
 
 NUM_PINGS = 100
 BUFF_SIZE = 1024
 
+
 def main(remote_addr):
-    """ Repeatedly ping a remote host.
+    """ Repeatedly ping the remote host.
 
     :param remote_addr: The IP address and port of the host to ping
     """
@@ -17,11 +18,17 @@ def main(remote_addr):
     for i in range(NUM_PINGS):
         print("")
         while not ping(client_socket, remote_addr, i):
-            pass
+            print("Ping {} dropped...Sending retransmission".format(i))
 
 
 def ping(client_socket, server_addr, message_id):
-    """ Send a ping message to the remote address and process the response.
+    """ Send a ping message to the remote address.
+
+    Constructs and sends a ping message with the given id to the to the server
+    via the provided socket and processes the reply. If the server gives a
+    positive reply, outputs the (RTT) for the message. The RTT is computed as
+    the difference between the timestamp of the response and the *most recent*
+    ping transmission.
 
     :param client_socket: The socket with which to send the ping.
     :param server_addr: The address of the remote host to ping.
@@ -29,22 +36,20 @@ def ping(client_socket, server_addr, message_id):
     :return: ``True`` if the ping was successful. ``False`` otherwise.
     """
     # Send the ping
-    timestamp = time()
-    msg = create_message(message_id, timestamp)
+    timestamp = time.time()
+    msg = create_message(message_id, time.ctime(timestamp))
     client_socket.sendto(msg, server_addr)
 
+    # Process reply
     reply = get_reply(client_socket, server_addr)
     if msg.upper() == reply:
         # Ping successful
-        print(reply)
-        print("RTT for ping {}: {}".format(message_id, time() - timestamp))
+        reply_timestamp = time.time()
+        print("Received reply from {}: {}".format(server_addr, reply))
+        print("RTT {} seconds".format(reply_timestamp - timestamp))
         return True
     else:
         # Packet was dropped.
-        # todo should we compute the RTT based on the old timestamp or simply
-        #  run the sending protocol again? If we want rtt = time of initial ping
-        #  to time of valid reply, then we need to adjust this logic.
-        print("Ping {} dropped...".format(message_id))
         return False
 
 
