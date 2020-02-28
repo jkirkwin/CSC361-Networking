@@ -1,12 +1,9 @@
 import sys
-from select import select
 from socket import *
 from time import time
 
 NUM_PINGS = 100
 BUFF_SIZE = 1024
-DEFAULT_TIMEOUT_SECONDS = 1
-
 
 def main(remote_addr):
     """ Repeatedly ping a remote host.
@@ -56,28 +53,25 @@ def create_message(index, timestamp):
     return "ping {} {}".format(index, timestamp).encode()
 
 
-def get_reply(client_socket, expected_addr, timeout=DEFAULT_TIMEOUT_SECONDS):
+def get_reply(client_socket, expected_addr):
     """ Get a reply message from the given remote host.
+
+    Performs a simple read from the socket. The server process is running on 
+    the same host (although in an emulated network) so we are guaranteed that 
+    there will be no dropped packets. Packets received from other senders will
+    be silently discarded.
 
     :param client_socket: The socket which will receive the reply
     :param expected_addr: The address from which the reply must come
-    :param timeout: The maximum amount of time allowed between a read attempt
-                    and data retrieval from the socket.
 
-    :return: The reply that is received. ``None`` if the timeout expires before
-             data can be read.
+    :return: The reply that is received.
     """
     reply = ''
     reply_received = False
     while not reply_received:
-        # Account for the possibility of packets that were really were dropped.
-        # TODO ask TAs/Jianping about this - make sure it won't lose you marks.
-        ready = select([client_socket], [], [], timeout)  
-        if ready[0]:
-            (reply, reply_addr) = client_socket.recvfrom(BUFF_SIZE)
-            reply_received = reply_addr == expected_addr
-        else:
-            return None
+        # Discard packets from senders other than the server being pinged.
+        (reply, reply_addr) = client_socket.recvfrom(BUFF_SIZE)
+        reply_received = reply_addr == expected_addr
 
     return reply
 
