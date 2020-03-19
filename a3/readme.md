@@ -1,11 +1,5 @@
 # Assignment 3 - Reliable HTTP Over UDP
 
-## Questions for the marker
-* What version of python will be used to mark this assignment?
-
-* For the bonus features, is each on worth the additional 1%, or is it 
-sufficient to implement only one to receive the extra 2 points? 
-
 ## Intro
 
 For this assignment I need to build two Python scripts which will communicate 
@@ -44,7 +38,7 @@ structure and timing of messages sent by the client and server are different.
 
 ### Packet Structure
 
-Packets are comprised of a 4 byte fixed header and a variable length 
+Packets are comprised of a 6 byte fixed header and a variable length 
 payload. Total packet length must not exceed 1024 bytes.
 
 Each message has the following fields:
@@ -78,7 +72,7 @@ one byte each.
 +----+------------------------------+-----------------------------------+ 2
 |           Seq No.                 |           Ack No.                 |
 +-----------------------------------+-----------------------------------+ 4
-|                           Payload Length                              |
+|       Payload Length MSB          |        Payload Length MSB         | 
 +-----------------------------------------------------------------------+ 6
 |                                                                       |
 |                           Payload                                     |
