@@ -21,50 +21,53 @@ PACKET_TYPES_IDS = {
 }
 PACKET_IDS_TYPES = ["ACK", "SYN", "FIN", "APP"]
 
+
 class Message:
     """
         Represents an RDP message with header fields and a payload.
     """
 
-    def __init__(self, packet_type, seq_no, ack_no, payload=None):
+    def __init__(self, packet_type, seq_no, ack_no, payload=bytearray()):
         """ Not for external use. Use factory methods to ensure consistency.
         """
 
         self.ack_no = ack_no
         self.seq_no = seq_no
         self.payload = payload
-        self._packet_type = packet_type  # String, key to types dict
+        self.packet_type = packet_type  # String, key to types dict
+
+    def __eq__(self, other):
+        return message_to_bytes(self) == message_to_bytes(other)
 
     def is_syn(self):
-        return self._packet_type == "SYN"
+        return self.packet_type == "SYN"
 
     def is_fin(self):
-        return self._packet_type == "FIN"
+        return self.packet_type == "FIN"
 
     def is_app(self):
-        return self._packet_type == "APP"
+        return self.packet_type == "APP"
 
     def is_ack(self):
         # Note that this may return true in addition to is_syn etc.
         return bool(self.ack_no)
 
     def is_ack_only(self):
-        return self._packet_type == "ACK"
+        return self.packet_type == "ACK"
 
     def get_payload_as_text(self):
-        assert False, "Unimplemented"
-
+        return self.payload.decode()
 
 def create_syn_message(seq_no, ack_no):
     """ Utility to create an RDP SYN message
     """
-    return Message("SYN", seq_no, ack_no, None)
+    return Message("SYN", seq_no, ack_no)
 
 
 def create_ack_message(seq_no, ack_no):
     """ Utility to create an RDP DATA message
     """
-    return Message("ACK", seq_no, ack_no, None)
+    return Message("ACK", seq_no, ack_no)
 
 
 def create_app_message(seq_no, ack_no, data):
@@ -76,15 +79,61 @@ def create_app_message(seq_no, ack_no, data):
 def create_fin_message(seq_no, ack_no):
     """ Utility to create an RDP FIN message
     """
-    return Message("FIN", seq_no, ack_no, None)
+    return Message("FIN", seq_no, ack_no)
 
 
-def message_from_bytes(bytes):
-    pass  # todo
+def message_from_bytes(binary_message):
+    """ Creates a message from the given bytearray representation.
+    """
+    # First byte holds ack bit and packet type
+    ack_bit_mask = 0x80  # 1000 0000
+    ack_bit = binary_message[0] & ack_bit_mask
+
+    packet_type_id = binary_message[0] & (~ack_bit_mask)
+    packet_type = PACKET_IDS_TYPES[packet_type_id]
+
+    # Second byte is reserved
+
+    # Third byte holds sequence number
+    seq_no = binary_message[2]
+
+    # Fourth byte holds ACK number
+    ack_no = binary_message[3] if ack_bit else None
+
+    # Fifth and sixth bytes hold payload length
+    pl_msb = binary_message[4]
+    pl_lsb = binary_message[5]
+    payload_len = (pl_msb << 8) | pl_lsb
+
+    # Remaining bytes are the payload
+    payload = binary_message[HEADER_SIZE: payload_len + HEADER_SIZE]
+
+    return Message(packet_type, seq_no, ack_no, payload)
 
 
 def message_to_bytes(msg):
-    pass  # todo
+    """ Converts the given message into its binary representation
+    """
+    payload_len = min(len(msg.payload), MAX_PAYLOAD_SIZE)
+    binary_msg = bytearray(HEADER_SIZE + payload_len)
+
+    packet_type = PACKET_TYPES_IDS[msg.packet_type]
+    ack_bit_mask = 0x80
+    first_byte = packet_type | ack_bit_mask if msg.is_ack() else packet_type
+    binary_msg[0] = first_byte
+
+    binary_msg[2] = msg.seq_no
+    binary_msg[3] = msg.ack_no
+
+    len_msb = (payload_len >> 8) & 0xFF
+    binary_msg[4] = len_msb
+    len_lsb = payload_len & 0xFF
+    binary_msg[5] = len_lsb
+
+    binary_msg[6:] = msg.payload
+
+    return binary_msg
+
 
 def is_ack_for_message(message, ack):
     return ack.is_ack() and message.seq_no == ack.ack_no

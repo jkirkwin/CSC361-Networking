@@ -27,7 +27,7 @@ def _get_msg_pair():
 
     # Second byte is reserved. Third and fourth are seq and ack numbers.
     binary_message[2] = seq_no
-    binary_message[3] = seq_no
+    binary_message[3] = ack_no
 
     # Fifth and sixth bytes are payload length
     byte_mask = 0xFF

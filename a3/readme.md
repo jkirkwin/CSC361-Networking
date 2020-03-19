@@ -58,7 +58,9 @@ has meaning.
 * Payload length - The number of bytes in the payload.
 
 Note that sequence and acknowledgement numbers are incremented on a per-message
-basis, rather than indexing to the binary data stream as is done in TCP.
+basis, rather than indexing to the binary data stream as is done in TCP. Note 
+also that a message with sequence number `x` is ACK'd by a message with 
+acknowledgement number `x`, __not__ `x+1`.
 
 The Packet Type and A bit share a single byte, with the least significant 4 bits
 used for the packet type, and the most significant bit used for the A flag. 
