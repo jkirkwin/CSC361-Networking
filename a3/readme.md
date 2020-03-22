@@ -186,6 +186,6 @@ FIN message from the server during this period, it will re-transmit its reply.
      | FIN, ACK       |
      |--------------->|
      |                |
-     |            ACK |
-     |<---------------|
-</pre>
+     |                |
+     |                |
+ </pre>
