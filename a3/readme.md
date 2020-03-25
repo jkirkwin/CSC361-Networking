@@ -4,7 +4,7 @@
 
 For this assignment I need to build two Python scripts which will communicate 
 over UDP sockets using a TCP/HTTP-esque protocol, RDP (not to be confused with 
-remote desktop.
+remote desktop).
 
 The most notable difference is that sequence and acknowledgement numbers 
 increment by one for each meaningful (non-ack-only) packet, rather than indexing
