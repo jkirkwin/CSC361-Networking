@@ -8,9 +8,11 @@ DEFAULT_ACK_TIMEOUT_SECONDS = 2
 DEFAULT_RETRY_THRESHOLD = 5
 
 MAX_PACKET_SIZE = 1024
-
 HEADER_SIZE = 6
 MAX_PAYLOAD_SIZE = MAX_PACKET_SIZE - HEADER_SIZE
+
+MAX_SEQ_NUMBER = 255
+MAX_ACK_NUMBER = 255
 
 # Ugly, but we need bidirectional mapping and this is unlikely to change.
 PACKET_TYPES_IDS = {
@@ -22,6 +24,18 @@ PACKET_TYPES_IDS = {
 PACKET_IDS_TYPES = ["ACK", "SYN", "FIN", "APP"]
 
 
+class Connection:
+    def __init__(self, remote_adr, remote_seq_num, seq_num=0):
+        self.remote_adr = remote_adr
+        self.last_index_received = remote_seq_num
+        self.seq_num = seq_num % MAX_SEQ_NUMBER
+
+    def get_next_seq_and_increment(self):
+        seq = self.seq_num
+        self.seq_num = (seq + 1 % MAX_SEQ_NUMBER)
+        return seq
+
+
 class Message:
     """
         Represents an RDP message with header fields and a payload.
@@ -31,10 +45,10 @@ class Message:
         """ Not for external use. Use factory methods to ensure consistency.
         """
 
+        self.packet_type = packet_type  # String, key to types dict
         self.ack_no = ack_no
         self.seq_no = seq_no
         self.payload = payload
-        self.packet_type = packet_type  # String, key to types dict
 
     def __eq__(self, other):
         return message_to_bytes(self) == message_to_bytes(other)
@@ -50,7 +64,7 @@ class Message:
 
     def is_ack(self):
         # Note that this may return true in addition to is_syn etc.
-        return bool(self.ack_no)
+        return self.ack_no is not None
 
     def is_ack_only(self):
         return self.packet_type == "ACK"
@@ -58,7 +72,8 @@ class Message:
     def get_payload_as_text(self):
         return self.payload.decode()
 
-def create_syn_message(seq_no, ack_no):
+
+def create_syn_message(seq_no, ack_no=None):
     """ Utility to create an RDP SYN message
     """
     return Message("SYN", seq_no, ack_no)

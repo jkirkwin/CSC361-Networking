@@ -1,6 +1,10 @@
+from socket import *
 from unittest import TestCase
 
 from a3.RDP_Protocol import *
+
+LOOPBACK = '127.0.0.1'
+TEST_TIMEOUT = 5
 
 
 def _get_msg_pair():
@@ -63,3 +67,35 @@ class ProtocolTest(TestCase):
     def test_bytes_to_message(self):
         message, binary_message = _get_msg_pair()
         self.assertEqual(message, message_from_bytes(binary_message))
+
+    def test_send_message_via_socket_sanity_check(self):
+        with socket(AF_INET, SOCK_DGRAM) as sock:
+            adr = (LOOPBACK, 56556)
+            sock.bind(adr)
+
+            seq = 10
+            ack = 20
+            message = create_ack_message(seq, ack)
+            bin_message = message_to_bytes(message)
+
+            sock.settimeout(TEST_TIMEOUT)
+            sock.sendto(bin_message, adr)
+            (result, _) = sock.recvfrom(1024)
+            result_message = message_from_bytes(result)
+
+            self.assertEqual(bin_message, result)
+            self.assertEqual(message, result_message)
+
+    def test_is_ack_for_message(self):
+        out_seq_num = 12
+        out_ack_num = 1  # Arbitrary, should not affect result
+        message_out = create_app_message(out_seq_num, out_ack_num, b'test123')
+
+        ack_seq_num = out_ack_num  # Should not affect result
+        ack_ack_num = out_seq_num
+        ack = create_ack_message(ack_seq_num, ack_ack_num)
+
+        bad_ack = create_ack_message(ack_seq_num, ack_ack_num + 1)
+
+        self.assertTrue(is_ack_for_message(message_out, ack))
+        self.assertFalse(is_ack_for_message(message_out, bad_ack))
