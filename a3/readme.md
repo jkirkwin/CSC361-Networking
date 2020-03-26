@@ -6,17 +6,16 @@ For this assignment I need to build two Python scripts which will communicate
 over UDP sockets using a TCP/HTTP-esque protocol, RDP (not to be confused with 
 remote desktop).
 
-The most notable difference is that sequence and acknowledgement numbers 
-increment by one for each meaningful (non-ack-only) packet, rather than indexing
-into the byte stream.
-
+The most notable differences are to do with sequence and acknowledgement 
+numbers. See __Sequence and ACK Number Semantics__ for details. 
+  
 ## Client
 The client implementation will be called `RDP_Client.py` as per the 
 specification.
 
 After connecting to the server (see __Protocol__), the client will send a GET
 message and will receive a set of datagrams holding the content of the specified
-file.
+file, after which the connection will terminate.
 
 The client will then save the file locally.
 
@@ -31,6 +30,7 @@ requested file via DATA messages, before closing the connection.
 
 The server's buffer is the same size as that of the maximum packet, at 1024 
 bytes.
+
 ## Protocol
 
 As defined here, the RDP will not be a symmetric protocol; that is, the 
@@ -45,7 +45,7 @@ Each message has the following fields:
 * Is Acknowledgement (A) - Indicates whether the acknowledgement number field 
 has meaning.
 * Packet Type - Indicates what this packet is used for. Allowed values are:
-    * 0 (ACK ONLY): No information besides an acknowledgement
+    * 0 (ACK_ONLY): No information besides an acknowledgement
     * 1 (SYN): A synchronization message to begin a connection
     * 2 (FIN): A finish message to terminate a connection
     * 3 (APP): An application-data-carrying message
@@ -82,30 +82,42 @@ one byte each.
 +-----------------------------------------------------------------------+
 </pre>
 
+### Sequence and ACK Number Semantics
+
+A message with sequence number `x` is to be acknowledged by a message with 
+acknowledgement number `x`.
+
+The sequence number of a uni-directional stream will be incremented by 1 for 
+every packet sent that is not of type ACK_ONLY. 
+
+The acknowledgement number field of a message must contain the acknowledgement 
+number of the most recently received message that was successfully processed. 
+
+Sequence numbers have a maximum value of 255 and a minimum value of 0. If a 
+message has sequence number 255, then the next non-ACK_ONLY message will have 
+sequence number 0.
+
+The initial sequence number of a message stream in either direction may start 
+with any value in the range [0, 255].
+
 ### Connection Establishment
 Similar to TCP, there is a three way handshake in order to begin a connection.
-The client sends the first message (A SYN message with no ACK) to initiate this connection.
 
-The client will send an initial ACK message to the server with the ACK bit set 
-to false. All other messages exchanged will have the ack bit set. The client 
-will wait until it receives a SYN-ACK packet from the server and will retransmit
-as needed, up to a maximum amount of times after which it will give up and 
-consider the connection lost. 
+The client sends the first message (A SYN message with no ACK) to initiate the
+connection. All other messages exchanged will have the ack bit set. 
+The client will wait until it receives a SYN-ACK packet from the server and will
+retransmit the initial SYN as needed, up to a maximum amount of times after which
+it will give up and consider the server unreachable. 
 
 On receipt of the SYN message, the server will send back a SYN message with the 
 ACK bit set and the acknowledgement number equal to the sequence number of the 
 previous message.
 
-Every time the server sends a message, it will wait until the client sends back 
-an appropriate ACK. All messages sent by the server will have the ack bit set 
-and the acknowledgement number set to the sequence number of the most recently 
-processed packet.
-
 After the server's SYN message has been ACK'd, the server views the connection 
 as established and it awaits an APP message to begin the data transfer phase. 
 If the client retransmits a SYN message while the server considers the 
 connection established, the server will respond with the appropriate ACK 
-message.
+message and consider the connection reset.
 
 After the client has sent an ACK for the server's SYN message, it will send a 
 GET request in an APP message with the same ACK number. If the initial ACK is 
