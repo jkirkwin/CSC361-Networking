@@ -1,10 +1,20 @@
-from socket import *
+import os
+import queue
+import random
+import threading
 from unittest import TestCase
 
 from a3.RDP_Protocol import *
 
-LOOPBACK = '127.0.0.1'
+LOOPBACK_IP = '127.0.0.1'
+TEST_PORT = 56565
+LOOPBACK_ADR = (LOOPBACK_IP, TEST_PORT)
+
 TEST_TIMEOUT = 5
+
+
+def get_rand_seq_no():
+    return random.randint(0, MAX_SEQ_NUMBER - 1)
 
 
 def _get_msg_pair():
@@ -48,10 +58,11 @@ def _get_msg_pair():
 
 class ProtocolTest(TestCase):
     def setUp(self) -> None:
-        pass
+        self.loopback_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.loopback_sock.bind(LOOPBACK_ADR)
 
     def tearDown(self) -> None:
-        pass
+        self.loopback_sock.close()
 
     def test_message_to_from_bytes(self):
         # This is a sanity check
@@ -69,22 +80,18 @@ class ProtocolTest(TestCase):
         self.assertEqual(message, message_from_bytes(binary_message))
 
     def test_send_message_via_socket_sanity_check(self):
-        with socket(AF_INET, SOCK_DGRAM) as sock:
-            adr = (LOOPBACK, 56556)
-            sock.bind(adr)
+        seq = 10
+        ack = 20
+        message = create_ack_message(seq, ack)
+        bin_message = message_to_bytes(message)
 
-            seq = 10
-            ack = 20
-            message = create_ack_message(seq, ack)
-            bin_message = message_to_bytes(message)
+        self.loopback_sock.settimeout(TEST_TIMEOUT)
+        self.loopback_sock.sendto(bin_message, LOOPBACK_ADR)
+        (result, _) = self.loopback_sock.recvfrom(len(bin_message))
+        result_message = message_from_bytes(result)
 
-            sock.settimeout(TEST_TIMEOUT)
-            sock.sendto(bin_message, adr)
-            (result, _) = sock.recvfrom(1024)
-            result_message = message_from_bytes(result)
-
-            self.assertEqual(bin_message, result)
-            self.assertEqual(message, result_message)
+        self.assertEqual(bin_message, result)
+        self.assertEqual(message, result_message)
 
     def test_is_ack_for_message(self):
         out_seq_num = 12
@@ -99,3 +106,99 @@ class ProtocolTest(TestCase):
 
         self.assertTrue(is_ack_for_message(message_out, ack))
         self.assertFalse(is_ack_for_message(message_out, bad_ack))
+
+    def test_send_read_message(self):
+        def get_rand_payload():
+            size = random.randint(0, MAX_PAYLOAD_SIZE - 1)
+            return os.urandom(size)
+
+        message1 = create_syn_message(get_rand_seq_no(), get_rand_seq_no())
+        message2 = create_app_message(get_rand_seq_no(),
+                                      get_rand_seq_no(),
+                                      get_rand_payload())
+
+        send_message(self.loopback_sock, message1, LOOPBACK_ADR)
+        send_message(self.loopback_sock, message2, LOOPBACK_ADR)
+
+        result1 = try_read_message(self.loopback_sock, TEST_TIMEOUT)
+        result2 = try_read_message(self.loopback_sock, TEST_TIMEOUT)
+
+        self.assertEqual(message1, result1)
+        self.assertEqual(message2, result2)
+
+    def test_try_receive_ack(self):
+        connection = Connection(LOOPBACK_ADR,
+                                get_rand_seq_no(),
+                                get_rand_seq_no())
+
+        msg_out = create_app_message(connection.seq_num,
+                                     connection.last_index_received,
+                                     b"hello")
+
+        # Test that a valid ACK is recognized and returned
+        valid_ack = create_ack_message(get_rand_seq_no(), msg_out.seq_no)
+        assert is_ack_for_message(msg_out, valid_ack), "Programming error."
+
+        send_message(self.loopback_sock, valid_ack, LOOPBACK_ADR)
+        result = try_receive_ack(msg_out, TEST_TIMEOUT, self.loopback_sock, LOOPBACK_ADR)
+        self.assertTrue(result)
+        self.assertEqual(valid_ack, result)
+
+        # Test that a receipt of a bad ack yields None after a timeout.
+        bad_ack_no = (msg_out.seq_no + 1) % MAX_SEQ_NUMBER
+        invalid_ack = create_ack_message(get_rand_seq_no(), bad_ack_no)
+        assert (not is_ack_for_message(msg_out, invalid_ack)), \
+            "Programming error."
+
+        send_message(self.loopback_sock, invalid_ack, LOOPBACK_ADR)
+        result = try_receive_ack(msg_out,
+                                 TEST_TIMEOUT,
+                                 self.loopback_sock,
+                                 LOOPBACK_ADR)
+        self.assertIsNone(result)
+
+    def test_await_ack(self):
+        msg_out = create_syn_message(get_rand_seq_no(), get_rand_seq_no())
+
+        non_ack = create_syn_message(get_rand_seq_no(), None)
+        assert not is_ack_for_message(msg_out, non_ack), "Programming error."
+
+        ack = create_ack_message(get_rand_seq_no(), msg_out.seq_no)
+        assert is_ack_for_message(msg_out, ack), "Programming error."
+
+        # Verify that non-ack messages are discarded
+        send_message(self.loopback_sock, non_ack, LOOPBACK_ADR)
+        send_message(self.loopback_sock, ack, LOOPBACK_ADR)
+
+        result = await_ack(msg_out, self.loopback_sock, LOOPBACK_ADR)
+        self.assertEqual(ack, result)
+
+        # None should be returned if no ack is received before the timeout
+        class Worker(threading.Thread):
+            """ A worker thread that sleeps for a timeout and calls
+            """
+            def __init__(self, q, msg, sock, adr, wait_time):
+                super().__init__()
+                self.q = q
+                self.msg = msg
+                self.sock = sock
+                self.adr = adr
+                self.wait_time = wait_time
+
+            def run(self):
+                result = await_ack(self.msg,
+                                   self.sock,
+                                   self.adr,
+                                   self.wait_time)
+                q.put(result, block=False)
+
+        send_message(self.loopback_sock, non_ack, LOOPBACK_ADR)
+
+        q = queue.Queue()
+        await_time = TEST_TIMEOUT / 10
+        worker = Worker(q, msg_out, self.loopback_sock, LOOPBACK_ADR, await_time)
+        worker.start()
+        worker.join(TEST_TIMEOUT / 2)
+
+        result = q.get(block=False)
+        self.assertIsNone(result)
