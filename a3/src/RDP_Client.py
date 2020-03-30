@@ -5,7 +5,8 @@ import sys
 from .RDP_Protocol import *
 
 BUFF_SIZE = 2 * MAX_PACKET_SIZE
-
+CLIENT_PORT = 55555
+CLIENT_ADR = ('', CLIENT_PORT)
 
 class ClientConnection(Connection):
     """ A `Connection` that holds a socket
@@ -17,6 +18,8 @@ class ClientConnection(Connection):
 
 def main(server_adr, filename, result_filename):
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        sock.bind(CLIENT_ADR)
+
         connection = connect_to_server(server_adr, sock)
 
         content = get_from_server(filename, connection)
@@ -155,7 +158,8 @@ def connect_to_server(adr, sock):
     seq_no = random.randint(0, MAX_SEQ_NUMBER)
     syn = create_syn_message(seq_no)
 
-    response = send_until_ack_in(message_to_bytes(syn), sock, adr)
+    print("Connecting to server ...")
+    response = send_until_ack_in(syn, sock, adr)
     if not response:
         print("No response from server")
         return None
@@ -186,7 +190,7 @@ if __name__ == '__main__':
         ip = sys.argv[1]
         port = int(sys.argv[2])
         filename = sys.argv[3]
-        result_filename = sys.argv[4] if len(sys.argv == 5) \
+        result_filename = sys.argv[4] if len(sys.argv) == 5 \
             else "RDP_RESULT_" + filename
 
         main((ip, port), filename, result_filename)
