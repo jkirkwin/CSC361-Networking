@@ -243,6 +243,9 @@ def try_receive_ack(msg_out, timeout, sock, remote_adr):
         if msg_in.src_adr == remote_adr and is_ack_for_message(msg_out, msg_in):
             logging.debug("ACK received")
             return msg_in
+        else:
+            logging.debug("Received message from {}, but not valid ACK."
+                          .format(msg_in.src_adr))
     except socket.timeout:
         pass
 
