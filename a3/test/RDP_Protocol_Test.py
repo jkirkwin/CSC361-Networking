@@ -4,7 +4,7 @@ import random
 import threading
 from unittest import TestCase
 
-from a3.RDP_Protocol import *
+from a3.src.RDP_Protocol import *
 
 LOOPBACK_IP = '127.0.0.1'
 TEST_PORT = 56565

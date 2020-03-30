@@ -2,8 +2,8 @@ import os
 from socket import *
 from unittest import TestCase
 
-from a3.RDP_Protocol import *
-from a3.RDP_Server import Server
+from a3.src.RDP_Protocol import *
+from a3.src.RDP_Server import Server
 
 LOOPBACK = "127.0.0.1"
 SOCKET_ADDRESS = (LOOPBACK, 0)
