@@ -1,8 +1,11 @@
 import hashlib
+import logging
 import random
 import sys
 
 from .RDP_Protocol import *
+
+logging.basicConfig(level=logging.INFO)
 
 BUFF_SIZE = 2 * MAX_PACKET_SIZE
 CLIENT_PORT = 55555
@@ -27,18 +30,19 @@ def main(server_adr, filename, result_filename):
             if content:
                 create_file(result_filename, content)
                 if checksum_matches(filename, result_filename):
-                    print("="*5 + " CHECKSUM VERIFIED " + "="*5)
+                    logging.info("CHECKSUM VERIFIED")
                 else:
-                    print("!"*5 + " INVALID CHECKSUM " + "!"*5)
+                    logging.warning("INVALID CHECKSUM")
             else:
-                print("Unable to retrieve '{}' from server.".format(filename))
+                logging.error("Unable to retrieve '{}' from server.".
+                              format(filename))
 
 
 def create_file(name, content, binary=False):
     mode = "wb" if binary else "w"
     with open(name, mode) as f:
         f.write(content)
-    print("Created '{}'".format(name))
+    logging.info("Created '{}'".format(name))
 
 
 def get_from_server(filename, connection):
@@ -56,7 +60,7 @@ def get_from_server(filename, connection):
     if ack:
         return receive_file_content(connection, request, ack)
     else:
-        print("ERROR: No ACK received")
+        logging.error("No ACK received")
         return None
 
 
@@ -76,7 +80,7 @@ def receive_file_content(connection, request, ack):
     # todo check that the file was provided (e.g. not 404)
 
     if not (ack.is_app() or ack.is_fin()):
-        print("ERROR: ack not an application or fin message.")
+        logging.error("ACK not an application or fin message.")
     else:
         content = ""
         data_msg = ack
@@ -95,15 +99,15 @@ def receive_file_content(connection, request, ack):
                 timeout = DEFAULT_ACK_TIMEOUT_SECONDS * DEFAULT_RETRY_THRESHOLD
                 data_msg = try_read_message(connection.sock, timeout)
                 if data_msg.src_adr != connection.remote_adr:
-                    print("WARNING: Dropping packet from bad sender.")
+                    logging.warning("Dropping packet from bad sender.")
             except socket.timeout:
-                print("ERROR: Server stopped responding.")
+                logging.error("Server stopped responding.")
                 return None
 
         if data_msg.is_fin():
             handle_disconnection(data_msg, connection)
         else:
-            print("ERROR: Non-FIN packet received")
+            logging.error("Non-FIN packet received during file transfer")
 
         return content
 
@@ -161,10 +165,10 @@ def connect_to_server(adr, sock):
     print("Connecting to server ...")
     response = send_until_ack_in(syn, sock, adr)
     if not response:
-        print("No response from server")
+        logging.error("No response from server")
         return None
     elif not response.is_syn():
-        print("WARNING: Ack for SYN was not a SYN.")
+        logging.warning("Ack for SYN was not a SYN.")
 
     connection = ClientConnection(adr, response.seq_no, seq_no, sock)
 

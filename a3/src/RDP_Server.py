@@ -1,8 +1,11 @@
+import logging
 import os
 import sys
 from socket import *
 
 from .RDP_Protocol import *
+
+logging.basicConfig(level=logging.INFO)
 
 BUFF_SIZE = MAX_PACKET_SIZE  # todo why is this unused?
 CONNECTION_TIMEOUT = 10
@@ -41,7 +44,7 @@ class Server:
     def _serve_loop(self):
         while True:
             try:
-                print("Serving on {}".format(self.adr))
+                logging.info("Serving on {}".format(self.adr))
 
                 block = CONNECTION_TIMEOUT if self.conn else None
                 message = try_read_message(self.sock, block)
@@ -50,16 +53,17 @@ class Server:
                 self._abandon_connection("Connection timeout expired")
 
     def _abandon_connection(self, cause):
-        print("Client connectivity lost ({}). Abandoning connection"
-              .format(cause))
+        logging.warning("Client connectivity lost ({}). Abandoning connection"
+                        .format(cause))
         self.conn = None
 
     def _dispatch(self, message):
         """ Dispatch an inbound message to the appropriate handler.
         """
         if self.conn and self.conn.remote_adr != message.src_adr:
-            print("Existing connection. Dropping packet received from {}"
-                  .format(message.src_adr))
+            logging.warning("Existing connection with {}. "
+                            "Dropping packet received from {}"
+                            .format(self.conn.adr, message.src_adr))
 
         elif message.is_syn():
             ack = self._receive_connection(message)
@@ -70,11 +74,12 @@ class Server:
                 self._dispatch(ack)
 
         elif not self.conn:
-            print("Received non-SYN message without a connection. Dropping.")
+            logging.warning("Received non-SYN message without a connection. "
+                            "Dropping.")
 
         elif message.seq_no != self.conn.next_expected_index():
             # todo relax this constraint - previous seq num is probably fine
-            error_message = "WARNING: Bad sequence number: {}. Expected {}" \
+            error_message = "Bad sequence number: {}. Expected {}"\
                 .format(message.seq_no, self.conn.last_index_received + 1)
             self._abandon_connection(error_message)
 
@@ -82,7 +87,7 @@ class Server:
             self._process_get_request(message)
 
         else:
-            print("Failed to dispatch message. Dropping packet.")
+            logging.warning("Failed to dispatch message. Dropping packet.")
 
     def _receive_connection(self, syn):
         """ Processes a SYN message and creates a connection.
@@ -96,9 +101,9 @@ class Server:
 
         if self.conn:
             assert self.conn.remote_adr == syn.src_adr
-            print("WARNING: Received SYN message from already connected client")
+            logging.warning("Received SYN message from already connected client")
         else:
-            print("Connection request (SYN) from {}".format(syn.src_adr))
+            logging.info("Connection request (SYN) from {}".format(syn.src_adr))
 
         self.conn = Connection(syn.src_adr, syn.seq_no)
 
@@ -114,7 +119,7 @@ class Server:
             "Programming Error. Cannot process APP packet without connection."
 
         filename = message.payload  # Not directly following HTTP structure.
-        print("Received request from client for '{}'".format(filename))
+        logging.info("Received request from client for '{}'".format(filename))
 
         if not os.path.isfile(filename):
             string = "404 No Such File: {}".format(filename)
@@ -161,10 +166,10 @@ class Server:
 
     def _close_connection(self):
         if not self.conn:
-            print("WARNING: No connection to close")
+            logging.warning("Cannot close connection. No connection to close")
             return
         else:
-            print("Closing connection")
+            logging.info("Closing connection")
 
         seq = self.conn.get_next_seq_and_increment()
         ack = self.conn.last_index_received
@@ -172,9 +177,9 @@ class Server:
 
         fin_ack_msg = self._send_until_ack_in(fin_msg)
         if not fin_ack_msg:
-            print("INFO: No ACK received in response to FIN message.")
+            logging.warning("No ACK received in response to FIN message.")
         elif not fin_ack_msg.is_fin():
-            print("WARNING: FIN message ACK was not itself a FIN message.")
+            logging.warning("FIN message ACK was not itself a FIN message.")
 
         self.conn = None
 
