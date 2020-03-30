@@ -10,6 +10,7 @@ BUFF_SIZE = 2 * MAX_PACKET_SIZE
 CLIENT_PORT = 55555
 CLIENT_ADR = ('', CLIENT_PORT)
 
+
 class ClientConnection(Connection):
     """ A `Connection` that holds a socket
     """

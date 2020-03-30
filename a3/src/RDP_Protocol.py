@@ -198,7 +198,8 @@ def send_until_ack_in(message, sock, remote_adr):
             return ack
         else:
             attempts += 1
-        return None
+
+    return None
 
 
 def await_ack(msg_out, sock, remote_adr, timeout=DEFAULT_ACK_TIMEOUT_SECONDS):
