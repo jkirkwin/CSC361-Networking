@@ -114,6 +114,8 @@ class Server:
         seq_no = self.conn.get_next_seq_and_increment()
         reply = create_syn_message(ack_no, seq_no)
 
+        logging.info("Using base sequence number {}".format(seq_no))
+
         ack = self._send_until_ack_in(reply)
         return ack
 

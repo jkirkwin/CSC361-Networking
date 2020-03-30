@@ -160,6 +160,7 @@ def connect_to_server(adr, sock):
     :return: The connection object created if successful, None otherwise.
     """
     seq_no = random.randint(0, MAX_SEQ_NUMBER)
+    logging.info("Initial Sequence Number: {}".format(seq_no))
     syn = create_syn_message(seq_no)
 
     print("Connecting to server ...")
