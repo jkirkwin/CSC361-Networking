@@ -100,7 +100,7 @@ class Server:
         else:
             print("Connection request (SYN) from {}".format(syn.src_adr))
 
-        self.conn = Connection(syn.src_adr, syn.seq_num)
+        self.conn = Connection(syn.src_adr, syn.seq_no)
 
         ack_no = self.conn.last_index_received
         seq_no = self.conn.get_next_seq_and_increment()

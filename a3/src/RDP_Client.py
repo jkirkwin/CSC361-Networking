@@ -21,17 +21,17 @@ def main(server_adr, filename, result_filename):
         sock.bind(CLIENT_ADR)
 
         connection = connect_to_server(server_adr, sock)
+        if connection:
+            content = get_from_server(filename, connection)
 
-        content = get_from_server(filename, connection)
-
-        if content:
-            create_file(result_filename, content)
-            if checksum_matches(filename, result_filename):
-                print("="*5 + " CHECKSUM VERIFIED " + "="*5)
+            if content:
+                create_file(result_filename, content)
+                if checksum_matches(filename, result_filename):
+                    print("="*5 + " CHECKSUM VERIFIED " + "="*5)
+                else:
+                    print("!"*5 + " INVALID CHECKSUM " + "!"*5)
             else:
-                print("!"*5 + " INVALID CHECKSUM " + "!"*5)
-        else:
-            print("Unable to retrieve '{}' from server.".format(filename))
+                print("Unable to retrieve '{}' from server.".format(filename))
 
 
 def create_file(name, content, binary=False):
