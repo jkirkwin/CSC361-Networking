@@ -2,7 +2,7 @@ import os
 import sys
 from socket import *
 
-from a3.src.RDP_Protocol import *
+from .RDP_Protocol import *
 
 BUFF_SIZE = MAX_PACKET_SIZE  # todo why is this unused?
 CONNECTION_TIMEOUT = 10

@@ -2,7 +2,7 @@ import hashlib
 import random
 import sys
 
-from a3.src.RDP_Protocol import *
+from .RDP_Protocol import *
 
 BUFF_SIZE = 2 * MAX_PACKET_SIZE
 
