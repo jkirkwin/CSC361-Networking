@@ -1,11 +1,10 @@
-import logging
 import os
 import sys
 from socket import *
 
 from .RDP_Protocol import *
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 BUFF_SIZE = MAX_PACKET_SIZE  # todo why is this unused?
 CONNECTION_TIMEOUT = 10
@@ -41,13 +40,17 @@ class Server:
         # at construction is a wildcard.
         self.adr = self.sock.getsockname()
 
+        logging.debug("Created and bound socket to port {}".format(self.adr[1]))
+
     def _serve_loop(self):
+        logging.info("Serving on {}".format(self.adr))
         while True:
             try:
-                logging.info("Serving on {}".format(self.adr))
-
                 block = CONNECTION_TIMEOUT if self.conn else None
                 message = try_read_message(self.sock, block)
+
+                logging.debug("Read message from serve loop")
+
                 self._dispatch(message)
             except socket.timeout:
                 self._abandon_connection("Connection timeout expired")

@@ -1,11 +1,10 @@
 import hashlib
-import logging
 import random
 import sys
 
 from .RDP_Protocol import *
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 BUFF_SIZE = 2 * MAX_PACKET_SIZE
 CLIENT_PORT = 55555

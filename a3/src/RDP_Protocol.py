@@ -3,6 +3,7 @@
     Protocol) as defined in the assignment 3 specification and related
     documentation.
 """
+import logging
 import socket
 import time
 
@@ -212,6 +213,7 @@ def await_ack(msg_out, sock, remote_adr, timeout=DEFAULT_ACK_TIMEOUT_SECONDS):
     :param remote_adr: The address of the socket from which the ack must come.
     :return: The ACK message if one is received. `None` otherwise.
     """
+    logging.debug("Awaiting ACK")
 
     stop_time = time.time() + timeout
 
@@ -219,9 +221,12 @@ def await_ack(msg_out, sock, remote_adr, timeout=DEFAULT_ACK_TIMEOUT_SECONDS):
     while time_remaining > 0:
         ack = try_receive_ack(msg_out, time_remaining, sock, remote_adr)
         if ack:
+            logging.debug("ACK received")
             return ack
         else:
             time_remaining = stop_time - time.time()
+
+    logging.debug("No ACK received")
     return None
 
 
@@ -231,12 +236,17 @@ def try_receive_ack(msg_out, timeout, sock, remote_adr):
     If the first message read from the socket is not the desired ack from the
     correct sender, it is discarded and the method returns `None`.
     """
+    logging.debug("Attempting to receive ACK")
     try:
         msg_in = try_read_message(sock, timeout)
         if msg_in.src_adr == remote_adr and is_ack_for_message(msg_out, msg_in):
+            logging.debug("ACK received")
             return msg_in
     except socket.timeout:
-        return None
+        pass
+
+    logging.debug("No ACK received")
+    return None
 
 
 def try_read_message(sock, timeout=None):
@@ -245,8 +255,13 @@ def try_read_message(sock, timeout=None):
         :raises `socket.timeout` if a time_out is given and a message cannot be
         read before it
     """
+    logging.debug("Attempting to read message")
+
     sock.settimeout(timeout)
     (message_bytes, src_adr) = sock.recvfrom(MAX_PACKET_SIZE)
+
+    logging.debug("Message read successfully")
+
     dest_adr = sock.getsockname()
     return message_from_bytes(message_bytes, src_adr, dest_adr)
 
@@ -254,6 +269,8 @@ def try_read_message(sock, timeout=None):
 def send_message(sock, message, dest_adr):
     """ Sends the message to the provided address and updates message metadata.
     """
+    logging.debug("Sending message to {}".format(dest_adr))
+
     message.dest_adr = dest_adr
     message.src_adr = sock.getsockname()
     sock.sendto(message_to_bytes(message), dest_adr)
@@ -263,6 +280,8 @@ def send_ack(msg_in, connection, sock):
     """ Creates and sends an ACK for the message. Does not update connection
     state.
     """
+    logging.debug("Sending ACK")
+
     ack = create_ack_message(connection.seq_num, msg_in.seq_num)
     send_message(sock, ack, connection.remote_adr)
 
