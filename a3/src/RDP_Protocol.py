@@ -263,11 +263,13 @@ def try_read_message(sock, timeout=None):
 
     sock.settimeout(timeout)
     (message_bytes, src_adr) = sock.recvfrom(MAX_PACKET_SIZE)
-
-    logging.debug("Message read successfully")
-
     dest_adr = sock.getsockname()
-    return message_from_bytes(message_bytes, src_adr, dest_adr)
+    message = message_from_bytes(message_bytes, src_adr, dest_adr)
+
+    logging.debug("Message (seq {}) read successfully from {}"
+                  .format(message.seq_no, src_adr))
+
+    return message
 
 
 def send_message(sock, message, dest_adr):
