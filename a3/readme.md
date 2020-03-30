@@ -29,6 +29,9 @@ To run the client process (After running the server process):
 python3 -m a3.src.RDP_Client <Server IP> <Server Port> <Filename> [Result Filename]
 ```
 
+You can alternatively run the client and server from the `a3` directory using 
+`src.modulename` instead of `a3.src.modulename`.
+
 ## Client
 The client implementation will be called `RDP_Client.py` as per the 
 specification.
