@@ -1,6 +1,6 @@
 import os
+import unittest
 from socket import *
-from unittest import TestCase
 
 from a3.src.RDP_Protocol import *
 from a3.src.RDP_Server import Server
@@ -10,7 +10,7 @@ SOCKET_ADDRESS = (LOOPBACK, 0)
 TIMEOUT = 5
 
 
-class ServerTest(TestCase):
+class ServerTest(unittest.TestCase):
 
     def setUp(self) -> None:
         self.server = Server(SOCKET_ADDRESS)
@@ -49,3 +49,7 @@ class ServerTest(TestCase):
 
     def test_close_connection(self):  # todo
         self.fail("Unimplemented")
+
+
+if __name__ == '__main__':
+    unittest.main()

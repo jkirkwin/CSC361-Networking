@@ -35,6 +35,7 @@ def create_file(name, content, binary=False):
     mode = "wb" if binary else "w"
     with open(name, mode) as f:
         f.write(content)
+    print("Created '{}'".format(name))
 
 
 def get_from_server(filename, connection):
@@ -91,15 +92,15 @@ def receive_file_content(connection, request, ack):
                 timeout = DEFAULT_ACK_TIMEOUT_SECONDS * DEFAULT_RETRY_THRESHOLD
                 data_msg = try_read_message(connection.sock, timeout)
                 if data_msg.src_adr != connection.remote_adr:
-                    print("Bad sender. Dropping packet.")
+                    print("WARNING: Dropping packet from bad sender.")
             except socket.timeout:
-                print("Server stopped responding.")
+                print("ERROR: Server stopped responding.")
                 return None
 
         if data_msg.is_fin():
             handle_disconnection(data_msg, connection)
         else:
-            print("Error. Non-FIN packet received")
+            print("ERROR: Non-FIN packet received")
 
         return content
 
@@ -179,8 +180,8 @@ def checksum_matches(filename1, filename2):
 
 if __name__ == '__main__':
     if len(sys.argv) not in [4, 5]:
-        print("Usage: python RDP_Client.py <Server IP> <Server Port> "
-              "<Filename> [Result Filename]")
+        print("Usage: python3 -m a3.src.RDP_Client "
+              "<Server IP> <Server Port> <Filename> [Result Filename]")
     else:
         ip = sys.argv[1]
         port = int(sys.argv[2])

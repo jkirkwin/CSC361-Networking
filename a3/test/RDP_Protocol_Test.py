@@ -2,7 +2,7 @@ import os
 import queue
 import random
 import threading
-from unittest import TestCase
+import unittest
 
 from a3.src.RDP_Protocol import *
 
@@ -56,7 +56,7 @@ def _get_msg_pair():
     return message, binary_message
 
 
-class ProtocolTest(TestCase):
+class ProtocolTest(unittest.TestCase):
     def setUp(self) -> None:
         self.loopback_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.loopback_sock.bind(LOOPBACK_ADR)
@@ -202,3 +202,7 @@ class ProtocolTest(TestCase):
 
         result = q.get(block=False)
         self.assertIsNone(result)
+
+
+if __name__ == '__main__':
+    unittest.main()

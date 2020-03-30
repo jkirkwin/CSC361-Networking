@@ -30,7 +30,7 @@ class Server:
             self.sock = None
 
     def _create_and_bind_socket(self):
-        sock = socket(AF_INET, SOCK_DGRAM)
+        sock = socket.socket(AF_INET, SOCK_DGRAM)
         sock.bind(self.adr)
         self.sock = sock
 
@@ -41,6 +41,8 @@ class Server:
     def _serve_loop(self):
         while True:
             try:
+                print("Serving on {}".format(self.adr))
+
                 block = CONNECTION_TIMEOUT if self.conn else None
                 message = try_read_message(self.sock, block)
                 self._dispatch(message)
@@ -112,6 +114,7 @@ class Server:
             "Programming Error. Cannot process APP packet without connection."
 
         filename = message.payload  # Not directly following HTTP structure.
+        print("Received request from client for '{}'".format(filename))
 
         if not os.path.isfile(filename):
             string = "404 No Such File: {}".format(filename)
@@ -160,6 +163,8 @@ class Server:
         if not self.conn:
             print("WARNING: No connection to close")
             return
+        else:
+            print("Closing connection")
 
         seq = self.conn.get_next_seq_and_increment()
         ack = self.conn.last_index_received
@@ -186,8 +191,9 @@ class Server:
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 4:
-        print("Usage: python RDP_Server.py <Server IP> <Server Port>")
+    if len(sys.argv) != 3:
+        print("Usage: " 
+              "python3 -m a3.src.RDP_Server <Server IP> <Server Port>")
     else:
         ip = sys.argv[1]
         port = int(sys.argv[2])

@@ -8,7 +8,27 @@ remote desktop).
 
 The most notable differences are to do with sequence and acknowledgement 
 numbers. See __Sequence and ACK Number Semantics__ for details. 
-  
+
+## Running the code
+
+Set your working directory to be one which contains `a3`. If you've cloned the 
+repo, this would be `CSC361`.
+
+To run the unit tests: 
+```bash
+python3 -m a3.test.<TestName>
+```
+
+To run the server process: 
+```bash
+python3 -m a3.src.RDP_Server <Server IP> <Server Port>
+```
+
+To run the client process (After running the server process):
+```bash
+python3 -m a3.src.RDP_Client <Server IP> <Server Port> <Filename> [Result Filename]
+```
+
 ## Client
 The client implementation will be called `RDP_Client.py` as per the 
 specification.
