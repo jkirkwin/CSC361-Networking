@@ -108,6 +108,10 @@ def create_ack_message(seq_no, ack_no):
 
 def create_app_message(seq_no, ack_no, data):
     """ Utility to create an RDP APP message
+
+    :param seq_no The sequence number to use
+    :param ack_no The sequence number to use
+    :param data The payload of the message, in binary form
     """
     return Message("APP", seq_no, ack_no, data)
 

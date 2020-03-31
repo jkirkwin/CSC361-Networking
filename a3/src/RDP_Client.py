@@ -54,7 +54,7 @@ def get_from_server(filename, connection):
     """
     request = create_app_message(connection.get_next_seq_and_increment(),
                                  connection.last_index_received,
-                                 filename)
+                                 filename.encode())
 
     ack = send_until_ack_in(request, connection.sock, connection.remote_adr)
     if ack:
