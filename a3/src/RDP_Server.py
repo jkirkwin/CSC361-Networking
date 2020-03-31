@@ -158,7 +158,7 @@ class Server:
         assert len(data) <= MAX_PAYLOAD_SIZE, "Data chunk too large"
 
         ack_no = self.conn.last_index_received
-        seq_no = self.conn.get_seq_and_increment
+        seq_no = self.conn.get_seq_and_increment()
 
         msg = create_app_message(seq_no, ack_no, data)
         return self._send_until_ack_in(msg)
