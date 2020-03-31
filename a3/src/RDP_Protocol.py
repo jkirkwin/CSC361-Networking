@@ -291,7 +291,8 @@ def send_message(sock, message, dest_adr):
 
     message.dest_adr = dest_adr
     message.src_adr = sock.getsockname()
-    sock.sendto(message_to_bytes(message), dest_adr)
+    binary_message = message_to_bytes(message)
+    sock.sendto(binary_message, dest_adr)
 
 
 def send_ack(msg_in, connection, sock):

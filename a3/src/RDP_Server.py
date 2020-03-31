@@ -127,12 +127,15 @@ class Server:
         logging.info("Received request from client for '{}'".format(filename))
 
         if not os.path.isfile(filename):
-            string = "404 No Such File: {}".format(filename)
-            ack = self._send_data(string.encode())  # todo ensure client checks if request was successful
+            logging.info("No such file '{}'".format(filename))
+
+            content = "404 No Such File: {}".format(filename)
+            ack = self._send_data(content.encode())  # todo ensure client checks if request was successful
             if not ack:
                 return
         else:
             chunks = self._get_data_from_file(filename)
+            logging.info("Sending data in {} chunks".format(len(chunks)))
             for chunk in chunks:
                 ack = self._send_data(chunk)
                 if not ack:
@@ -145,6 +148,8 @@ class Server:
 
         Wraps the given data in an APP message and sends it to the client. Waits
         until an ACK is received before returning.
+
+        :param data The binary data to be sent
 
         :return `None` if the connection was lost. The ack message to the data
         message sent otherwise.
