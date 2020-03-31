@@ -292,6 +292,6 @@ def send_ack(msg_in, connection, sock):
     """
     logging.debug("Sending ACK")
 
-    ack = create_ack_message(connection.seq_num, msg_in.seq_num)
+    ack = create_ack_message(connection.seq_num, msg_in.seq_no)
     send_message(sock, ack, connection.remote_adr)
 
