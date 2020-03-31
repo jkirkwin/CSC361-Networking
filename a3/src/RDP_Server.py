@@ -112,7 +112,7 @@ class Server:
 
         ack_no = self.conn.last_index_received
         seq_no = self.conn.get_next_seq_and_increment()
-        reply = create_syn_message(ack_no, seq_no)
+        reply = create_syn_message(seq_no, ack_no)
 
         logging.info("Using base sequence number {}".format(seq_no))
 
