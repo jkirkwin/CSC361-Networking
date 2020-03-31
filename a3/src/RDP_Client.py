@@ -56,6 +56,8 @@ def get_from_server(filename, connection):
                                  connection.last_index_received,
                                  filename.encode())
 
+    logging.info("Sending request to server")
+
     ack = send_until_ack_in(request, connection.sock, connection.remote_adr)
     if ack:
         return receive_file_content(connection, request, ack)
@@ -88,10 +90,11 @@ def receive_file_content(connection, request, ack):
         while data_msg.is_app():
             if data_msg.seq_no == connection.last_index_received:
                 # Client ACK was lost. We have already processed this message.
-                acknowledge_message(connection, data_msg)
+                send_ack(data_msg, connection, connection.sock)
 
             elif data_msg.seq_no == connection.next_expected_index():
                 # Next chunk
+                logging.debug("Received chunk of file from server")
                 content += data_msg.get_payload_as_text()
 
             # Get the next message
@@ -104,10 +107,13 @@ def receive_file_content(connection, request, ack):
                 logging.error("Server stopped responding.")
                 return None
 
+        # Disconnect
         if data_msg.is_fin():
+            logging.debug("FIN received, disconnecting")
             handle_disconnection(data_msg, connection)
         else:
             logging.error("Non-FIN packet received during file transfer")
+            connection.sock.close()
 
         return content
 
@@ -145,11 +151,7 @@ def fin_keep_alive(fin_in, fin_out, connection):
             pass  # we will exit the loop on the next iteration
         remaining = stop_time - time.time()
 
-
-def acknowledge_message(connection, inbound_msg):
-    connection.last_index_received = inbound_msg.seq_no
-    ack = create_ack_message(connection.seq_num, connection.last_index_received)
-    send_message(connection.sock, ack, connection.remote_adr)
+    logging.debug("Keep alive period complete")
 
 
 def connect_to_server(adr, sock):
@@ -173,7 +175,8 @@ def connect_to_server(adr, sock):
 
     connection = ClientConnection(adr, response.seq_no, seq_no, sock)
 
-    acknowledge_message(connection, response)
+    send_ack(response, connection, sock)
+    connection.increment_next_expected_index()
 
     return connection
 
