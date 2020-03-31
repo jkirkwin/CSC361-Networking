@@ -38,9 +38,17 @@ class Connection:
         self.last_index_received = remote_seq_num
         self.seq_num = seq_num % MAX_SEQ_NUMBER
 
-    def get_next_seq_and_increment(self):
+    @staticmethod
+    def _increment(n):
+        return (n + 1) % MAX_SEQ_NUMBER
+
+    def increment_and_get_seq(self):
+        self.seq_num = Connection._increment(self.seq_num)
+        return self.seq_num
+
+    def get_seq_and_increment(self):
         seq = self.seq_num
-        self.seq_num = (seq + 1 % MAX_SEQ_NUMBER)
+        Connection._increment(self.seq_num)
         return seq
 
     def next_expected_index(self):

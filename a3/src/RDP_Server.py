@@ -111,7 +111,7 @@ class Server:
         self.conn = Connection(syn.src_adr, syn.seq_no)
 
         ack_no = self.conn.last_index_received
-        seq_no = self.conn.get_next_seq_and_increment()
+        seq_no = self.conn.get_seq_and_increment()
         reply = create_syn_message(seq_no, ack_no)
 
         logging.info("Using base sequence number {}".format(seq_no))
@@ -153,7 +153,7 @@ class Server:
         assert len(data) <= MAX_PAYLOAD_SIZE, "Data chunk too large"
 
         ack_no = self.conn.last_index_received
-        seq_no = self.conn.get_next_seq_and_increment
+        seq_no = self.conn.get_seq_and_increment
 
         msg = create_app_message(seq_no, ack_no, data)
         return self._send_until_ack_in(msg)
@@ -176,7 +176,7 @@ class Server:
         else:
             logging.info("Closing connection")
 
-        seq = self.conn.get_next_seq_and_increment()
+        seq = self.conn.get_seq_and_increment()
         ack = self.conn.last_index_received
         fin_msg = create_fin_message(seq, ack)
 

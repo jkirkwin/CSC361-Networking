@@ -52,7 +52,7 @@ def get_from_server(filename, connection):
     :param connection: The connection to the server
     :return: The content of the file, if successful. None otherwise.
     """
-    request = create_app_message(connection.get_next_seq_and_increment(),
+    request = create_app_message(connection.increment_and_get_seq(),
                                  connection.last_index_received,
                                  filename.encode())
 
@@ -120,7 +120,7 @@ def receive_file_content(connection, request, ack):
 
 def handle_disconnection(fin_in, connection):
     ack_no = fin_in.seq_num
-    seq_no = connection.get_next_seq_and_increment()
+    seq_no = connection.increment_and_get_seq()
     fin_out = create_fin_message(seq_no, ack_no)
 
     send_message(connection.sock, fin_out, connection.remote_adr)
@@ -174,10 +174,9 @@ def connect_to_server(adr, sock):
         logging.warning("Ack for SYN was not a SYN.")
 
     connection = ClientConnection(adr, response.seq_no, seq_no, sock)
-
-    send_ack(response, connection, sock)
     connection.increment_next_expected_index()
 
+    send_ack(response, connection, sock)
     return connection
 
 
