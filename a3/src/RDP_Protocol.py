@@ -1,7 +1,7 @@
 """
-    Utilities and constants related to the RDP (Reliable HTTP Server over UDP
-    Protocol) as defined in the assignment 3 specification and related
-    documentation.
+    Utilities, abstractions, and constants related to the RDP (Reliable HTTP
+    Server over UDP Protocol) as defined in the assignment 3 specification and
+    the associated README.
 """
 import logging
 import socket
@@ -206,11 +206,13 @@ def send_until_ack_in(message, sock, remote_adr):
     while attempts < DEFAULT_RETRY_THRESHOLD + 1:
         send_message(sock, message, remote_adr)
         ack = await_ack(message, sock, remote_adr)
+        attempts += 1
         if ack:
+            logging.debug("ACK received after {} attempts".format(attempts))
             return ack
-        else:
-            attempts += 1
 
+    logging.warning("Failed to receive ACK after {} retries"
+                    .format(DEFAULT_RETRY_THRESHOLD))
     return None
 
 
@@ -234,12 +236,11 @@ def await_ack(msg_out, sock, remote_adr, timeout=DEFAULT_ACK_TIMEOUT_SECONDS):
     while time_remaining > 0:
         ack = try_receive_ack(msg_out, time_remaining, sock, remote_adr)
         if ack:
-            logging.debug("ACK received")
             return ack
         else:
             time_remaining = stop_time - time.time()
 
-    logging.debug("No ACK received")
+    logging.debug("No ACK received in {} seconds".format(timeout))
     return None
 
 
@@ -253,7 +254,7 @@ def try_receive_ack(msg_out, timeout, sock, remote_adr):
     try:
         msg_in = try_read_message(sock, timeout)
         if msg_in.src_adr == remote_adr and is_ack_for_message(msg_out, msg_in):
-            logging.debug("ACK received")
+            logging.debug("ACK received successfully")
             return msg_in
         else:
             logging.debug("Received message from {}, but not valid ACK."
@@ -261,7 +262,7 @@ def try_receive_ack(msg_out, timeout, sock, remote_adr):
     except socket.timeout:
         pass
 
-    logging.debug("No ACK received")
+    logging.debug("Failed to receive ACK")
     return None
 
 

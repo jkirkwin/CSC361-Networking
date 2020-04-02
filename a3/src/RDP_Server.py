@@ -43,7 +43,7 @@ class Server:
         logging.debug("Created and bound socket to port {}".format(self.adr[1]))
 
     def _serve_loop(self):
-        logging.info("Serving on {}".format(self.adr))
+        logging.info("Serving on {}. Waiting for connection.".format(self.adr))
         while True:
             try:
                 block = CONNECTION_TIMEOUT if self.conn else None
@@ -190,7 +190,8 @@ class Server:
             logging.warning("No ACK received in response to FIN message.")
         elif not fin_ack_msg.is_fin():
             logging.warning("FIN message ACK was not itself a FIN message.")
-
+        else:
+            logging.info("Received FIN_ACK message.")
         self.conn = None
 
     def _send_until_ack_in(self, message):

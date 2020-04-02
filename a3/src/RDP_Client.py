@@ -62,7 +62,7 @@ def get_from_server(filename, connection):
     if ack:
         return receive_file_content(connection, request, ack)
     else:
-        logging.error("No ACK received")
+        logging.error("No ACK received for GET request")
         return None
 
 
@@ -163,9 +163,11 @@ def connect_to_server(adr, sock):
     """
     seq_no = random.randint(0, MAX_SEQ_NUMBER)
     logging.info("Initial Sequence Number: {}".format(seq_no))
+
     syn = create_syn_message(seq_no)
 
-    print("Connecting to server ...")
+    logging.info("Connecting to server {}".format(adr))
+
     response = send_until_ack_in(syn, sock, adr)
     if not response:
         logging.error("No response from server")
