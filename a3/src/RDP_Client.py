@@ -60,7 +60,6 @@ def connect_to_server(adr, sock):
         logging.warning("Ack for SYN was not a SYN.")
 
     connection = ClientConnection(adr, response.seq_no, seq_no, sock)
-    connection.increment_next_expected_index()
 
     send_ack(response, connection, sock)
     return connection
