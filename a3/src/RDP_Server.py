@@ -123,7 +123,9 @@ class Server:
         assert self.conn, \
             "Programming Error. Cannot process APP packet without connection."
 
-        filename = message.payload  # Not directly following HTTP structure.
+        # Not directly following HTTP structure.
+        filename = message.get_payload_as_text()
+
         logging.info("Received request from client for '{}'".format(filename))
 
         self.conn.increment_next_expected_index()
