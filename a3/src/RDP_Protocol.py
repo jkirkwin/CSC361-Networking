@@ -48,7 +48,7 @@ class Connection:
 
     def get_seq_and_increment(self):
         seq = self.seq_num
-        Connection._increment(self.seq_num)
+        self.seq_num = Connection._increment(self.seq_num)
         return seq
 
     def next_expected_index(self):

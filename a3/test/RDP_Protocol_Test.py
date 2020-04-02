@@ -204,5 +204,52 @@ class ProtocolTest(unittest.TestCase):
         self.assertIsNone(result)
 
 
+class ConnectionTest(unittest.TestCase):
+
+    def setUp(self):
+        self.remote_seq_seed = random.randint(0, MAX_SEQ_NUMBER - 1)
+        self.local_seq_seed = random.randint(0, MAX_SEQ_NUMBER - 1)
+        self.conn = Connection(LOOPBACK_ADR,
+                               self.remote_seq_seed,
+                               self.local_seq_seed)
+
+    def test_increment_and_get_seq(self):
+        result = self.conn.increment_and_get_seq()
+        expected = (self.local_seq_seed + 1) % MAX_SEQ_NUMBER
+        # Check that the correct result is returned and the connection state is
+        # updated
+        self.assertEqual(expected, result)
+        self.assertEqual(expected, self.conn.seq_num)
+
+        # Check that the ack number is unchanged
+        self.assertEqual(self.remote_seq_seed, self.conn.last_index_received)
+
+    def test_get_seq_and_increment(self):
+        result = self.conn.get_seq_and_increment()
+        expected = self.local_seq_seed
+        # Check that the correct result is returned and the connection state is
+        # updated
+        self.assertEqual(expected, result)
+        self.assertEqual((expected + 1) % MAX_SEQ_NUMBER, self.conn.seq_num)
+
+        # Check that the ack number is unchanged
+        self.assertEqual(self.remote_seq_seed, self.conn.last_index_received)
+
+    def test_next_expected_index(self):
+        expected = (self.remote_seq_seed + 1) % MAX_ACK_NUMBER
+        for i in range(0, 10):
+            self.assertEqual(expected, self.conn.next_expected_index())
+
+        self.assertEqual(self.remote_seq_seed, self.conn.last_index_received)
+
+    def test_increment_next_expected_index(self):
+        for i in range(1, 10):
+            expected = (self.remote_seq_seed + i) % MAX_ACK_NUMBER
+            self.conn.increment_next_expected_index()
+            result = self.conn.last_index_received
+
+            self.assertEqual(expected, result)
+
+
 if __name__ == '__main__':
     unittest.main()
