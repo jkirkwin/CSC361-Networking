@@ -279,7 +279,7 @@ def try_read_message(sock, timeout=None):
     dest_adr = sock.getsockname()
     message = message_from_bytes(message_bytes, src_adr, dest_adr)
 
-    logging.debug("Message (seq {}) read successfully from {}"
+    logging.debug("Message (seq {}) read from {}"
                   .format(message.seq_no, src_adr))
 
     return message
@@ -288,7 +288,8 @@ def try_read_message(sock, timeout=None):
 def send_message(sock, message, dest_adr):
     """ Sends the message to the provided address and updates message metadata.
     """
-    logging.debug("Sending message to {}".format(dest_adr))
+    logging.debug("Sending message (seq {}) to {}"
+                  .format(message.seq_no, dest_adr))
 
     message.dest_adr = dest_adr
     message.src_adr = sock.getsockname()
