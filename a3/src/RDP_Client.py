@@ -60,70 +60,90 @@ def get_from_server(filename, connection):
 
     ack = send_until_ack_in(request, connection.sock, connection.remote_adr)
     if ack:
-        return receive_file_content(connection, request, ack)
+        if not (ack.is_app() or ack.is_fin()):
+            logging.error("ACK not an application or fin message.")
+            return None
+        else:
+            return receive_file_content(connection, ack)
     else:
         logging.error("No ACK received for GET request")
         return None
 
 
-# todo break this up into smaller methods
-def receive_file_content(connection, request, ack):
-    """ Read each APP message from the server, ACKing each one, until the
+def receive_file_content(connection, app):
+    """ Receives the file content from the serverRead each APP message from the server, ACKing each one, until the
     connection is terminated.
 
     :param connection: The connection to the server
-    :param request: The request that was sent
-    :param ack: The ack for the request
+    :param app: The first app message from the server
 
 
     :return: The content of the file returned. None if no content was retrieved.
     """
+    assert app.is_app(), "Programming error"
+
+    content = ""
+    message_in = app
 
     # todo check that the file was provided (e.g. not 404)
 
-    if not (ack.is_app() or ack.is_fin()):
-        logging.error("ACK not an application or fin message.")
+    while message_in.is_app():
+        # Process the current message
+        content = process_app_message(message_in, connection, content)
+        if not content:
+            return None
+
+        # Get the next message
+        try:
+            timeout = DEFAULT_ACK_TIMEOUT_SECONDS * DEFAULT_RETRY_THRESHOLD
+            message_in = try_read_message(connection.sock, timeout)
+            if message_in.src_adr != connection.remote_adr:
+                logging.warning("Dropping packet from bad sender.")
+        except socket.timeout:
+            logging.error("Server stopped responding.")
+            return None
+
+    # Disconnect
+    if message_in.is_fin():
+        logging.debug("FIN received, disconnecting")
+        handle_disconnection(message_in, connection)
     else:
-        content = ""
-        data_msg = ack
+        logging.error("Non-FIN packet received during file transfer")
+        connection.sock.close()
 
-        while data_msg.is_app():
-            if data_msg.seq_no == connection.last_index_received:
-                # Client ACK was lost. We have already processed this message.
-                logging.debug("Re-ACKing seq {}".format(data_msg.seq_no))
-                send_ack(data_msg, connection, connection.sock)
+    return content
 
-            elif data_msg.seq_no == connection.next_expected_index():
-                # Next chunk
-                logging.debug("Received chunk of file from server")
-                content += data_msg.get_payload_as_text()
-            else:
-                # Unknown seq no
-                s = "Bad sequence number {} during file transfer. Expected {}."\
-                    .format(data_msg.seq_no,
-                            connection.increment_next_expected_index())
-                logging.error(s)
-                return None
 
-            # Get the next message
-            try:
-                timeout = DEFAULT_ACK_TIMEOUT_SECONDS * DEFAULT_RETRY_THRESHOLD
-                data_msg = try_read_message(connection.sock, timeout)
-                if data_msg.src_adr != connection.remote_adr:
-                    logging.warning("Dropping packet from bad sender.")
-            except socket.timeout:
-                logging.error("Server stopped responding.")
-                return None
+def process_app_message(msg, connection, current_content):
+    """ Processes the given APP message.
 
-        # Disconnect
-        if data_msg.is_fin():
-            logging.debug("FIN received, disconnecting")
-            handle_disconnection(data_msg, connection)
-        else:
-            logging.error("Non-FIN packet received during file transfer")
-            connection.sock.close()
+    :param msg The APP message received from the server
+    :param connection The current connection
+    :param current_content A string containing all previously received content
+    from the server
 
-        return content
+    :return: The total content received from the server. `None` if an error
+    occurred.
+    """
+    if msg.seq_no == connection.last_index_received:
+        # Client ACK was lost. We have already processed this message.
+        logging.debug("Re-ACKing seq {}".format(msg.seq_no))
+        send_ack(msg, connection, connection.sock)
+
+    elif msg.seq_no == connection.next_expected_index():
+        # Next chunk
+        logging.debug("Received chunk of file from server")
+        current_content += msg.get_payload_as_text()
+        send_ack(msg, connection, connection.sock)
+    else:
+        # Unknown seq no
+        s = "Bad sequence number {} during file transfer. Expected {}." \
+            .format(msg.seq_no,
+                    connection.increment_next_expected_index())
+        logging.error(s)
+        current_content = None
+
+    return current_content
 
 
 def handle_disconnection(fin_in, connection):
