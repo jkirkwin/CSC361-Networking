@@ -38,11 +38,32 @@ def main(server_adr, filename, result_filename):
                               format(filename))
 
 
-def create_file(name, content, binary=False):
-    mode = "wb" if binary else "w"
-    with open(name, mode) as f:
-        f.write(content)
-    logging.info("Created '{}'".format(name))
+def connect_to_server(adr, sock):
+    """ Perform a 3-way handshake with the server at the given remote address
+
+    :param adr: The address of the server
+    :param sock: The socket to use
+    :return: The connection object created if successful, None otherwise.
+    """
+    seq_no = random.randint(0, MAX_SEQ_NUMBER)
+    logging.info("Initial Sequence Number: {}".format(seq_no))
+
+    syn = create_syn_message(seq_no)
+
+    logging.info("Connecting to server {}".format(adr))
+
+    response = send_until_ack_in(syn, sock, adr)
+    if not response:
+        logging.error("No response from server")
+        return None
+    elif not response.is_syn():
+        logging.warning("Ack for SYN was not a SYN.")
+
+    connection = ClientConnection(adr, response.seq_no, seq_no, sock)
+    connection.increment_next_expected_index()
+
+    send_ack(response, connection, sock)
+    return connection
 
 
 def get_from_server(filename, connection):
@@ -60,8 +81,8 @@ def get_from_server(filename, connection):
 
     ack = send_until_ack_in(request, connection.sock, connection.remote_adr)
     if ack:
-        if not (ack.is_app() or ack.is_fin()):
-            logging.error("ACK not an application or fin message.")
+        if not (ack.is_app()):
+            logging.error("ACK not an application message.")
             return None
         else:
             return receive_file_content(connection, ack)
@@ -114,6 +135,13 @@ def receive_file_content(connection, app):
     return content
 
 
+def create_file(name, content, binary=False):
+    mode = "wb" if binary else "w"
+    with open(name, mode) as f:
+        f.write(content)
+    logging.info("Created '{}'".format(name))
+
+
 def process_app_message(msg, connection, current_content):
     """ Processes the given APP message.
 
@@ -139,7 +167,7 @@ def process_app_message(msg, connection, current_content):
         # Unknown seq no
         s = "Bad sequence number {} during file transfer. Expected {}." \
             .format(msg.seq_no,
-                    connection.increment_next_expected_index())
+                    connection.next_expected_index())
         logging.error(s)
         current_content = None
 
@@ -185,34 +213,6 @@ def fin_keep_alive(fin_in, fin_out, connection):
     logging.debug("Keep alive period complete")
 
 
-def connect_to_server(adr, sock):
-    """ Perform a 3-way handshake with the server at the given remote address
-
-    :param adr: The address of the server
-    :param sock: The socket to use
-    :return: The connection object created if successful, None otherwise.
-    """
-    seq_no = random.randint(0, MAX_SEQ_NUMBER)
-    logging.info("Initial Sequence Number: {}".format(seq_no))
-
-    syn = create_syn_message(seq_no)
-
-    logging.info("Connecting to server {}".format(adr))
-
-    response = send_until_ack_in(syn, sock, adr)
-    if not response:
-        logging.error("No response from server")
-        return None
-    elif not response.is_syn():
-        logging.warning("Ack for SYN was not a SYN.")
-
-    connection = ClientConnection(adr, response.seq_no, seq_no, sock)
-    connection.increment_next_expected_index()
-
-    send_ack(response, connection, sock)
-    return connection
-
-
 def checksum_matches(filename1, filename2):
     """ Compares the md5 hashes of the content of the pair of files.
     """
@@ -235,4 +235,4 @@ if __name__ == '__main__':
 
         main((ip, port), filename, result_filename)
 
-# todo add unit tests
+# todo add unit tests/no-loss test
