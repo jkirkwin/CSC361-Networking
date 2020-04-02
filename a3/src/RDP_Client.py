@@ -224,14 +224,12 @@ def checksum_matches(filename1, filename2):
 if __name__ == '__main__':
     if len(sys.argv) not in [4, 5]:
         print("Usage: python3 -m a3.src.RDP_Client "
-              "<Server IP> <Server Port> <Filename> [Result Filename]")
+              "<Server IP> <Server Port> <Filename> <Result Filename>")
     else:
         ip = sys.argv[1]
         port = int(sys.argv[2])
         filename = sys.argv[3]
-        result_filename = sys.argv[4] if len(sys.argv) == 5 \
-            else "RDP_RESULT_" + filename
-
+        result_filename = sys.argv[4]
         main((ip, port), filename, result_filename)
 
 # todo add unit tests/no-loss test

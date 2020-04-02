@@ -26,7 +26,7 @@ python3 -m a3.src.RDP_Server <Server IP> <Server Port>
 
 To run the client process (After running the server process):
 ```bash
-python3 -m a3.src.RDP_Client <Server IP> <Server Port> <Filename> [Result Filename]
+python3 -m a3.src.RDP_Client <Server IP> <Server Port> <Filename> <Result Filename>
 ```
 
 You can alternatively run the client and server from the `a3` directory using 
