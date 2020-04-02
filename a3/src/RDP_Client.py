@@ -90,12 +90,20 @@ def receive_file_content(connection, request, ack):
         while data_msg.is_app():
             if data_msg.seq_no == connection.last_index_received:
                 # Client ACK was lost. We have already processed this message.
+                logging.debug("Re-ACKing seq {}".format(data_msg.seq_no))
                 send_ack(data_msg, connection, connection.sock)
 
             elif data_msg.seq_no == connection.next_expected_index():
                 # Next chunk
                 logging.debug("Received chunk of file from server")
                 content += data_msg.get_payload_as_text()
+            else:
+                # Unknown seq no
+                s = "Bad sequence number {} during file transfer. Expected {}."\
+                    .format(data_msg.seq_no,
+                            connection.increment_next_expected_index())
+                logging.error(s)
+                return None
 
             # Get the next message
             try:
@@ -142,6 +150,9 @@ def fin_keep_alive(fin_in, fin_out, connection):
     """
     remaining = FIN_KEEP_ALIVE
     stop_time = time.time() + remaining
+
+    logging.debug("Beginning keep alive period")
+
     while remaining > 0:
         try:
             message = try_read_message(connection.sock, remaining)
