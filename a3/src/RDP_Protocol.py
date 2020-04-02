@@ -35,7 +35,7 @@ class Connection:
     """
     def __init__(self, remote_adr, remote_seq_num, seq_num=0):
         self.remote_adr = remote_adr
-        self.last_index_received = remote_seq_num
+        self.last_index_received = remote_seq_num % MAX_SEQ_NUMBER
         self.seq_num = seq_num % MAX_SEQ_NUMBER
 
     @staticmethod
