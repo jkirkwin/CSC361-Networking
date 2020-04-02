@@ -126,6 +126,8 @@ class Server:
         filename = message.payload  # Not directly following HTTP structure.
         logging.info("Received request from client for '{}'".format(filename))
 
+        self.conn.increment_next_expected_index()
+
         if not os.path.isfile(filename):
             logging.info("No such file '{}'".format(filename))
 
