@@ -119,7 +119,7 @@ def receive_file_content(connection, request, ack):
 
 
 def handle_disconnection(fin_in, connection):
-    ack_no = fin_in.seq_num
+    ack_no = fin_in.seq_no
     seq_no = connection.increment_and_get_seq()
     fin_out = create_fin_message(seq_no, ack_no)
 
