@@ -237,7 +237,7 @@ def checksum_matches(content, filename):
     with open(filename, "rb") as f:
         content_hash = hashlib.md5(content)
         file_hash = hashlib.md5(f.read())
-        return content_hash == file_hash
+        return content_hash.digest() == file_hash.digest()
 
 
 if __name__ == '__main__':
