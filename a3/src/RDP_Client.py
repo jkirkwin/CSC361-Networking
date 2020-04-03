@@ -152,16 +152,18 @@ def process_app_message(msg, connection, current_content):
     :return: The total content received from the server. `None` if an error
     occurred.
     """
-    if msg.seq_no == connection.last_index_received:
-        # Client ACK was lost. We have already processed this message.
-        logging.debug("Re-ACKing seq {}".format(msg.seq_no))
-        send_ack(msg, connection, connection.sock)
-
-    elif msg.seq_no == connection.next_expected_index():
+    if msg.seq_no == connection.next_expected_index():
         # Next chunk
         logging.debug("Received chunk of file from server")
         current_content += msg.get_payload_as_text()
         send_ack(msg, connection, connection.sock)
+        connection.increment_next_expected_index()
+
+    elif msg.seq_no == connection.last_index_received:
+        # Client ACK was lost. We have already processed this message.
+        logging.debug("Re-ACKing seq {}".format(msg.seq_no))
+        send_ack(msg, connection, connection.sock)
+
     else:
         # Unknown seq no
         s = "Bad sequence number {} during file transfer. Expected {}." \
