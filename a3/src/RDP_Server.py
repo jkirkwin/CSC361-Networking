@@ -43,14 +43,14 @@ class Server:
         logging.debug("Created and bound socket to port {}".format(self.adr[1]))
 
     def _serve_loop(self):
-        logging.info("Serving on {}. Waiting for connection.".format(self.adr))
         while True:
             try:
+                if not self.conn:
+                    logging.info("Serving on {}. Waiting for connection."
+                                 .format(self.adr))
+
                 block = CONNECTION_TIMEOUT if self.conn else None
                 message = try_read_message(self.sock, block)
-
-                logging.debug("Read message from serve loop")
-
                 self._dispatch(message)
             except socket.timeout:
                 self._abandon_connection("Connection timeout expired")
@@ -63,6 +63,8 @@ class Server:
     def _dispatch(self, message):
         """ Dispatch an inbound message to the appropriate handler.
         """
+        logging.debug("Dispatching message")
+
         if self.conn and self.conn.remote_adr != message.src_adr:
             logging.warning("Existing connection with {}. "
                             "Dropping packet received from {}"
