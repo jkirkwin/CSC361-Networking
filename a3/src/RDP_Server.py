@@ -140,7 +140,7 @@ class Server:
             chunk_size = MAX_PAYLOAD_SIZE - HTTP_CODE_LEN
             chunks = self._get_data_from_file(filename, chunk_size)
 
-            logging.info("Sending data in {} chunks".format(len(chunks)))
+            logging.info("Sending data in {} chunk(s)".format(len(chunks)))
             for chunk in chunks:
                 ack = self._send_data(HTTP_OK_ENCODED + chunk)
                 if not ack:
@@ -176,6 +176,9 @@ class Server:
             while chunk:
                 chunks.append(chunk)
                 chunk = file.read(chunk_size)
+
+        if not chunks:
+            chunks = [bytes(0)]
 
         return chunks
 
