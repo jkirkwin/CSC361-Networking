@@ -110,8 +110,6 @@ def receive_file_content(connection, app):
     while message_in.is_app():
         # Process the current message
         content = process_app_message(message_in, connection, content)
-        if not content:
-            return None
 
         # Get the next message
         try:
@@ -123,13 +121,15 @@ def receive_file_content(connection, app):
             logging.error("Server stopped responding.")
             return None
 
+        # Previous packet was 404 or bad response, expecting FIN afterwards
+        if not content:
+            break
+
     # Disconnect
     if message_in.is_fin():
-        logging.debug("FIN received, disconnecting")
-        handle_disconnection(message_in, connection)
+        handle_fin(message_in, connection)
     else:
-        logging.error("Non-FIN packet received during file transfer")
-        connection.sock.close()
+        logging.error("Non-FIN packet received after file transfer")
 
     return content
 
@@ -148,30 +148,15 @@ def process_app_message(msg, connection, current_content):
     :param connection The current connection
     :param current_content A binary string containing all previously received
     content from the server
-
-    :return: The total content received from the server. `None` if an error
-    occurred.
     """
     if msg.seq_no == connection.next_expected_index():
-        # Inspect HTTP header
-        rdp_payload = msg.payload
-        http_code = rdp_payload[:HTTP_CODE_LEN]
-
-        if http_code != HTTP_OK_ENCODED:
-            logging.error("Bad HTTP Code received: {}"
-                          .format(http_code.decode()))
-            return None
-        else:
-            # Next chunk
-            logging.debug("Received chunk of file from server")
-            current_content += rdp_payload[HTTP_CODE_LEN:]
-            send_ack(msg, connection, connection.sock)
-            connection.increment_next_expected_index()
+        return process_next_app_message(msg, connection, current_content)
 
     elif msg.seq_no == connection.last_index_received:
         # Client ACK was lost. We have already processed this message.
         logging.debug("Re-ACKing seq {}".format(msg.seq_no))
         send_ack(msg, connection, connection.sock)
+        return current_content
 
     else:
         # Unknown seq no
@@ -181,10 +166,33 @@ def process_app_message(msg, connection, current_content):
         logging.error(s)
         return None
 
-    return current_content
+
+def process_next_app_message(msg, connection, current_content):
+    # Inspect HTTP header
+    rdp_payload = msg.payload
+    http_code = rdp_payload[:HTTP_CODE_LEN]
+
+    if http_code == HTTP_OK_ENCODED:
+        # Next chunk
+        logging.debug("Received chunk of file from server")
+        send_ack(msg, connection, connection.sock)
+
+        connection.increment_next_expected_index()
+        current_content += rdp_payload[HTTP_CODE_LEN:]
+        return current_content
+
+    elif http_code == HTTP_FILE_NOT_FOUND_ENCODED:
+        logging.warning("HTTP 404 received. File not found.")
+        return None
+
+    else:
+        logging.error("Bad HTTP Code received: {}"
+                      .format(http_code.decode()))
+        return None
 
 
-def handle_disconnection(fin_in, connection):
+def handle_fin(fin_in, connection):
+    logging.debug("FIN received, disconnecting")
     ack_no = fin_in.seq_no
     seq_no = connection.increment_and_get_seq()
     fin_out = create_fin_message(seq_no, ack_no)
@@ -192,8 +200,7 @@ def handle_disconnection(fin_in, connection):
     send_message(connection.sock, fin_out, connection.remote_adr)
 
     fin_keep_alive(fin_in, fin_out, connection)
-
-    connection.sock.close()
+    logging.info("Disconnected")
 
 
 def fin_keep_alive(fin_in, fin_out, connection):
