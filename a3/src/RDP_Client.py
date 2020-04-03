@@ -28,7 +28,7 @@ def main(server_adr, filename, result_filename):
 
             if content:
                 create_file(result_filename, content, binary=True)
-                if checksum_matches(filename, result_filename):
+                if checksum_matches(filename, content):
                     logging.info("CHECKSUM VERIFIED")
                 else:
                     logging.warning("INVALID CHECKSUM")
@@ -223,13 +223,14 @@ def fin_keep_alive(fin_in, fin_out, connection):
     logging.debug("Keep alive period complete")
 
 
-def checksum_matches(filename1, filename2):
-    """ Compares the md5 hashes of the content of the pair of files.
+def checksum_matches(content, filename):
+    """ Compares the md5 hash of the binary string given and the content of the
+    file specified.
     """
-    with open(filename1, "rb") as f1, open(filename2, "rb") as f2:
-        hash1 = hashlib.md5(f1.read())
-        hash2 = hashlib.md5(f2.read())
-        return hash1 == hash2
+    with open(filename, "rb") as f:
+        content_hash = hashlib.md5(content)
+        file_hash = hashlib.md5(f.read())
+        return content_hash == file_hash
 
 
 if __name__ == '__main__':
