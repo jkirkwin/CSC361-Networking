@@ -6,7 +6,6 @@ from .RDP_Protocol import *
 
 logging.basicConfig(level=logging.DEBUG)
 
-BUFF_SIZE = MAX_PACKET_SIZE  # todo why is this unused?
 CONNECTION_TIMEOUT = 10
 
 
