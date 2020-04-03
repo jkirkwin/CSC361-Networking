@@ -7,17 +7,22 @@ import logging
 import socket
 import time
 
-DEFAULT_ACK_TIMEOUT_SECONDS = 3
-DEFAULT_RETRY_THRESHOLD = 5
-
+# Packet Parameters
 MAX_PACKET_SIZE = 1024
 HEADER_SIZE = 6
 MAX_PAYLOAD_SIZE = MAX_PACKET_SIZE - HEADER_SIZE
-
 MAX_SEQ_NUMBER = 255
 MAX_ACK_NUMBER = 255
 
+# Timeouts
+DEFAULT_ACK_TIMEOUT_SECONDS = 3
+DEFAULT_RETRY_THRESHOLD = 5
 FIN_KEEP_ALIVE = DEFAULT_ACK_TIMEOUT_SECONDS * 2
+
+# HTTP-Related
+HTTP_OK_ENCODED = b'200'
+HTTP_FILE_NOT_FOUND_ENCODED = b'404'
+HTTP_CODE_LEN = 3  # Bytes to encode 3 digit HTTP code
 
 # Ugly, but we need bidirectional mapping and this is unlikely to change.
 PACKET_TYPES_IDS = {

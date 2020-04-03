@@ -107,8 +107,6 @@ def receive_file_content(connection, app):
     content = b""
     message_in = app
 
-    # todo check that the file was provided (e.g. not 404)
-
     while message_in.is_app():
         # Process the current message
         content = process_app_message(message_in, connection, content)
@@ -155,11 +153,20 @@ def process_app_message(msg, connection, current_content):
     occurred.
     """
     if msg.seq_no == connection.next_expected_index():
-        # Next chunk
-        logging.debug("Received chunk of file from server")
-        current_content += msg.payload
-        send_ack(msg, connection, connection.sock)
-        connection.increment_next_expected_index()
+        # Inspect HTTP header
+        rdp_payload = msg.payload
+        http_code = rdp_payload[:HTTP_CODE_LEN]
+
+        if http_code != HTTP_OK_ENCODED:
+            logging.error("Bad HTTP Code received: {}"
+                          .format(http_code.decode()))
+            return None
+        else:
+            # Next chunk
+            logging.debug("Received chunk of file from server")
+            current_content += rdp_payload[HTTP_CODE_LEN:]
+            send_ack(msg, connection, connection.sock)
+            connection.increment_next_expected_index()
 
     elif msg.seq_no == connection.last_index_received:
         # Client ACK was lost. We have already processed this message.
@@ -172,7 +179,7 @@ def process_app_message(msg, connection, current_content):
             .format(msg.seq_no,
                     connection.next_expected_index())
         logging.error(s)
-        current_content = None
+        return None
 
     return current_content
 

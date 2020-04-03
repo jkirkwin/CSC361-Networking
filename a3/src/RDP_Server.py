@@ -133,16 +133,16 @@ class Server:
 
         if not os.path.isfile(filename):
             logging.info("No such file '{}'".format(filename))
-
-            content = "404 No Such File: {}".format(filename)
-            ack = self._send_data(content.encode())  # todo ensure client checks if request was successful
+            ack = self._send_data(HTTP_FILE_NOT_FOUND_ENCODED)
             if not ack:
                 return
         else:
-            chunks = self._get_data_from_file(filename)
+            chunk_size = MAX_PAYLOAD_SIZE - HTTP_CODE_LEN
+            chunks = self._get_data_from_file(filename, chunk_size)
+
             logging.info("Sending data in {} chunks".format(len(chunks)))
             for chunk in chunks:
-                ack = self._send_data(chunk)
+                ack = self._send_data(HTTP_OK_ENCODED + chunk)
                 if not ack:
                     return
 
@@ -169,13 +169,13 @@ class Server:
         return self._send_until_ack_in(msg)
 
     @staticmethod
-    def _get_data_from_file(filename):  # todo parameterize the chunk size or add a prefix to allow us to stick an http header in there.
+    def _get_data_from_file(filename, chunk_size=MAX_PAYLOAD_SIZE):
         chunks = []
         with open(filename, 'rb') as file:
-            chunk = file.read(MAX_PAYLOAD_SIZE)
+            chunk = file.read(chunk_size)
             while chunk:
                 chunks.append(chunk)
-                chunk = file.read(MAX_PAYLOAD_SIZE)
+                chunk = file.read(chunk_size)
 
         return chunks
 
