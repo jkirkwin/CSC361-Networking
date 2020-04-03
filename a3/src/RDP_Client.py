@@ -28,7 +28,7 @@ def main(server_adr, filename, result_filename):
             content = get_from_server(filename, connection)
 
             if content:
-                create_file(result_filename, content)
+                create_file(result_filename, content, binary=True)
                 if checksum_matches(filename, result_filename):
                     logging.info("CHECKSUM VERIFIED")
                 else:
@@ -70,7 +70,7 @@ def get_from_server(filename, connection):
 
     :param filename: The file to request
     :param connection: The connection to the server
-    :return: The content of the file, if successful. None otherwise.
+    :return: The binary content of the file, if successful. None otherwise.
     """
     request = create_app_message(connection.increment_and_get_seq(),
                                  connection.last_index_received,
@@ -91,18 +91,21 @@ def get_from_server(filename, connection):
 
 
 def receive_file_content(connection, app):
-    """ Receives the file content from the serverRead each APP message from the server, ACKing each one, until the
-    connection is terminated.
+    """ Receives the file content from the server.
+
+    Read each APP message from the server, ACKing each one, until the connection
+    is terminated.
 
     :param connection: The connection to the server
     :param app: The first app message from the server
 
 
-    :return: The content of the file returned. None if no content was retrieved.
+    :return: The binary content of the file returned. None if no content was
+    retrieved.
     """
     assert app.is_app(), "Programming error"
 
-    content = ""
+    content = b""
     message_in = app
 
     # todo check that the file was provided (e.g. not 404)
@@ -146,8 +149,8 @@ def process_app_message(msg, connection, current_content):
 
     :param msg The APP message received from the server
     :param connection The current connection
-    :param current_content A string containing all previously received content
-    from the server
+    :param current_content A binary string containing all previously received
+    content from the server
 
     :return: The total content received from the server. `None` if an error
     occurred.
@@ -155,7 +158,7 @@ def process_app_message(msg, connection, current_content):
     if msg.seq_no == connection.next_expected_index():
         # Next chunk
         logging.debug("Received chunk of file from server")
-        current_content += msg.get_payload_as_text()
+        current_content += msg.payload
         send_ack(msg, connection, connection.sock)
         connection.increment_next_expected_index()
 
