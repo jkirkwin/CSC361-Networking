@@ -28,7 +28,7 @@ def main(server_adr, filename, result_filename):
 
             if content:
                 create_file(result_filename, content, binary=True)
-                if checksum_matches(filename, content):
+                if checksum_matches(content, filename):
                     logging.info("CHECKSUM VERIFIED")
                 else:
                     logging.warning("INVALID CHECKSUM")
