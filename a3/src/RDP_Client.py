@@ -4,7 +4,7 @@ import sys
 
 from .RDP_Protocol import *
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 CLIENT_PORT = 55555
 CLIENT_ADR = ('', CLIENT_PORT)
@@ -75,7 +75,7 @@ def get_from_server(filename, connection):
                                  connection.last_index_received,
                                  filename.encode())
 
-    logging.info("Sending request to server")
+    logging.info("Sending request for {} to server".format(filename))
 
     ack = send_until_ack_in(request, connection.sock, connection.remote_adr)
     if ack:
@@ -193,7 +193,7 @@ def process_next_app_message(msg, connection, current_content):
 
 
 def handle_fin(fin_in, connection):
-    logging.debug("FIN received, disconnecting")
+    logging.info("FIN received, disconnecting")
     ack_no = fin_in.seq_no
     seq_no = connection.increment_and_get_seq()
     fin_out = create_fin_message(seq_no, ack_no)

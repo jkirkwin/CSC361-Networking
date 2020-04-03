@@ -4,9 +4,9 @@ from socket import *
 
 from .RDP_Protocol import *
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
-CONNECTION_TIMEOUT = 10
+CONNECTION_TIMEOUT = DEFAULT_RETRY_THRESHOLD * DEFAULT_ACK_TIMEOUT_SECONDS
 
 
 class Server:
@@ -198,7 +198,7 @@ class Server:
         elif not fin_ack_msg.is_fin():
             logging.warning("FIN message ACK was not itself a FIN message.")
         else:
-            logging.info("Received FIN_ACK message.")
+            logging.info("Received FIN_ACK message. Disconnecting.")
         self.conn = None
 
     def _send_until_ack_in(self, message):
