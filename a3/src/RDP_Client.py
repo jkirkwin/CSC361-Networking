@@ -183,6 +183,7 @@ def process_next_app_message(msg, connection, current_content):
 
     elif http_code == HTTP_FILE_NOT_FOUND_ENCODED:
         logging.warning("HTTP 404 received. File not found.")
+        send_ack(msg, connection, connection.sock)
         return None
 
     else:
