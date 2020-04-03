@@ -251,5 +251,3 @@ if __name__ == '__main__':
         filename = sys.argv[3]
         result_filename = sys.argv[4]
         main((ip, port), filename, result_filename)
-
-# todo add unit tests/no-loss test

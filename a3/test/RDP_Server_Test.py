@@ -44,12 +44,6 @@ class ServerTest(unittest.TestCase):
                 if os.path.exists(filename):
                     os.remove(filename)
 
-    def test_receive_connection(self):  # todo
-        self.fail("Unimplemented")
-
-    def test_close_connection(self):  # todo
-        self.fail("Unimplemented")
-
 
 if __name__ == '__main__':
     unittest.main()

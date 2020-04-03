@@ -82,7 +82,6 @@ class Server:
                             "Dropping.")
 
         elif message.seq_no != self.conn.next_expected_index():
-            # todo relax this constraint - previous seq num is probably fine
             error_message = "Bad sequence number: {}. Expected {}"\
                 .format(message.seq_no, self.conn.last_index_received + 1)
             self._abandon_connection(error_message)
