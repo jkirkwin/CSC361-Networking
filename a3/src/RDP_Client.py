@@ -26,7 +26,7 @@ def main(server_adr, filename, result_filename):
         if connection:
             content = get_from_server(filename, connection)
 
-            if content:
+            if content is not None:
                 create_file(result_filename, content, binary=True)
                 if checksum_matches(content, filename):
                     logging.info("CHECKSUM VERIFIED")
@@ -122,7 +122,7 @@ def receive_file_content(connection, app):
             return None
 
         # Previous packet was 404 or bad response, expecting FIN afterwards
-        if not content:
+        if content is None:
             break
 
     # Disconnect
